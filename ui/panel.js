@@ -23,7 +23,7 @@ const ACCENT = '#7C3AED';
 const ACCENT_DARK = '#6D28D9';
 const ACCENT_LIGHT = '#EDE9FE';
 
-// Gerçek projede (Vervo TPL) HER modülün Init_CmdTables'ında birebir aynı
+// Gerçek projede HER modülün Init_CmdTables'ında birebir aynı
 // isimlerle tekrar eden 8 standart tablo — tahmin değil, referans XML'den
 // doğrulandı (astPrepareTable/astAutoTable/.../astBrakeReleaseTable).
 const STANDART_TABLOLAR = [

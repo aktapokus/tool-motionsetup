@@ -5,8 +5,8 @@ Motion Setup — CMD Table Builder engine.
 STATE_NODE primitifinin CMD_TABLE bağlamındaki uygulaması: bir CMD table
 sıralı bir "step" listesidir, her step {title, target_udi, cmd, timeout,
 is_end} taşır. Bu modül bir step listesini, referans Init_CmdTables
-POU'suyla (Vervo TPL framework, SR02_GroupTransferModule örneği) yapısal
-olarak eşleşen ST koduna çevirir.
+POU'suyla (referans örnek modül üzerinden) yapısal olarak eşleşen ST
+koduna çevirir.
 
 Referans desen (gerçek proje kodundan, SR02_GroupTransferModule.Init_CmdTables):
   - İlk step  -> TPL.FC_FirstStep(udiStepIndex, diStep);

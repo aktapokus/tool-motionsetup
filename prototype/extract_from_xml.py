@@ -50,7 +50,7 @@ if et_cmd_block:
     for m in re.finditer(r'<value name="(\w+)" value="(-?\d+)"', et_cmd_block.group(0)):
         et_cmd_values.append({"name": m.group(1), "value": int(m.group(2))})
 
-# ── 3) AXM.ET_Cmd.* — Schneider'in motion kutuphanesinden gelen, projede
+# ── 3) AXM.ET_Cmd.* — PLC motion kütüphanesinden gelen, projede
 # TANIMLANMAYAN (kullanilan) enum — deger degil, sadece isim cikarabiliriz. ──
 axm_cmds = sorted(set(re.findall(r'AXM\.ET_Cmd\.(\w+)', text)))
 

@@ -5,7 +5,7 @@
 > önceden haber verilmeden değişebilir. Gerçek üretim koduyla
 > test ediliyor ama henüz "bitti" sayılmıyor.
 
-Schneider Machine Expert / Vervo TPL framework pattern'ini (Equipment
+IEC 61131-3 tabanlı bir PLC framework pattern'ini (Equipment
 Module, CMD Table, numbered-state sequencer) hedefleyen bir IR → ST
 codegen aracı. Bu ilk sürüm sadece **CMD Table builder**'ı kapsıyor
 (`Init_CmdTables` POU'sundaki `astPrepareTable`/`astAutoTable` üretimi).
@@ -30,7 +30,7 @@ ST parser'ına bağımlı değil.
 - Her adım: başlık, hedef modül (`udi`), komut (`diCMD`), timeout,
   son-adım işareti.
 - `TPL.FC_FirstStep/NextStep/LastStep` + `astListofCMDTables[...]`
-  özet bloğunu, gerçek Vervo proje kodundaki referans yapıyla birebir
+  özet bloğunu, gerçek proje kodundaki referans yapıyla birebir
   eşleşen ST kodu olarak üretir.
 
 ## Kapsam dışı (sıradaki fazlar)
