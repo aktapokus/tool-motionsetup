@@ -1,0 +1,12 @@
+{
+  "id": "motionsetup",
+  "name": "Motion Setup — CMD Table Builder",
+  "namespace": "core",
+  "version": "0.1.0",
+  "faz": 1,
+  "aktif": true,
+  "description": "Schneider Machine Expert / Vervo TPL CMD table'larını (Prepare/Auto) sürükle-bırak bir adım listesinden ST koduna çevirir.",
+  "module": "tools.motionsetup",
+  "ui_entry": "panel.js",
+  "requires_folder": false
+}

@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aktapokus — Logic Editor</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #FAFAF8; --surface: #F2F1EC; --surface2: #FFFFFF; --border: #DCDAD2; --border-strong: #C7C4B8;
+  --blue: #3868D6; --blue-dim: #2A50AD;
+  --text: #1C1B18; --text-dim: #6B6A63; --text-xs: #9B9A92;
+  --green: #16803C; --red: #DC2626; --red-light: rgba(220,38,38,0.08);
+  --sans: 'Inter', system-ui, sans-serif;
+  --mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  --radius: 8px;
+  --block-bg: #14151A; --block-orange: #F5A623; --block-blue: #6DA9F7;
+}
+:root[data-theme="dark"] {
+  --bg: #17181C; --surface: #1F2023; --surface2: #26272B; --border: #303136; --border-strong: #43444A;
+  --blue: #3B7DF0; --blue-dim: #2A5FC7;
+  --text: #E8E6E2; --text-dim: #98968F; --text-xs: #656460;
+  --green: #4ADE80; --red: #F87171; --red-light: rgba(248,113,113,0.12);
+  --block-bg: #0C0D10; --block-orange: #F5A623; --block-blue: #7FB6FF;
+}
+* { box-sizing: border-box; }
+body { margin:0; background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 13px; }
+.topbar { padding: 10px 16px; border-bottom: 0.5px solid var(--border); display:flex; align-items:center; gap:18px; }
+a.geri { color: var(--text-dim); font-size: 12px; text-decoration: none; }
+a.geri:hover { color: var(--text); }
+h1 { font-size: 15px; font-weight: 600; margin: 0; display:inline-block; }
+.menu { display:flex; gap:14px; color: var(--text-dim); font-size:12px; }
+.spacer { flex:1; }
+.runbtn { border:none; background:none; cursor:pointer; padding:2px; }
+.err { color: var(--red); background: var(--red-light); border-radius: 6px; padding: 6px 10px; font-size: 12px; display:none; margin: 8px 16px 0; }
+.ok { color: var(--green); font-size: 12px; display:none; }
+.import-bar { padding: 10px 16px; border-bottom: 0.5px solid var(--border); display:flex; flex-direction:column; gap:6px; }
+.import-bar textarea { width:100%; min-height:60px; font-family:var(--mono); font-size:12px; padding:8px 10px; border-radius:var(--radius);
+  border:1px solid var(--border); background:var(--surface); color:var(--text); resize:vertical; }
+.import-row { display:flex; gap:8px; align-items:center; }
+.import-row input[type=text] { width:260px; }
+button { font-family: var(--sans); font-size: 12px; cursor: pointer; border-radius: 6px; border: 1px solid var(--border);
+  background: var(--surface2); color: var(--text); padding: 6px 12px; }
+button:hover { border-color: var(--text-xs); }
+button.sm { padding: 3px 7px; font-size: 11px; }
+input[type=text], input[type=number] { font-family: var(--mono); font-size: 12px; padding: 5px 8px; border-radius: 6px;
+  border: 1px solid var(--border); background: var(--bg); color: var(--text); }
+
+.shell { display:flex; height: calc(100vh - 52px); min-height:520px; }
+.pal { width: 172px; flex-shrink:0; border-right: 0.5px solid var(--border); padding: 12px; overflow-y:auto; }
+.pal h3 { font-size: 10px; text-transform:uppercase; letter-spacing:.04em; color: var(--text-xs); margin: 0 0 8px; font-weight:600; }
+.pal-item { width:100%; text-align:left; padding:7px 10px; margin-bottom:6px; border-radius: 6px; border:1px solid var(--border);
+  background:var(--surface2); font-size:12px; cursor:pointer; }
+.pal-item:hover { border-color: var(--blue); }
+.pal-new { width:100%; margin-top:6px; border-style:dashed; color: var(--text-dim); }
+
+.iopanel { flex-shrink:0; border-right: 0.5px solid var(--border); display:flex; width: 440px; transition: width .12s ease; }
+.iopanel.collapsed { width: 30px; }
+.io-toggle { width:30px; flex-shrink:0; border:none; border-radius:0; background:var(--surface); cursor:pointer;
+  border-right:0.5px solid var(--border); font-size:14px; color:var(--text-dim); }
+.io-toggle:hover { color: var(--text); }
+.iopanel-body { flex:1; min-width:0; padding: 16px; overflow-y:auto; }
+.iopanel.collapsed .iopanel-body { display:none; }
+.io-group { margin-bottom:22px; }
+.io-group h2 { font-size:12px; font-weight:600; margin:0 0 4px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.04em; }
+.io-hint { font-size:11px; color:var(--text-xs); margin:0 0 8px; line-height:1.4; }
+.io-row { display:flex; gap:6px; margin-bottom:6px; align-items:center; }
+.io-row input { flex:1; min-width:0; font-size:11px; }
+.io-add { width:100%; margin-top:2px; }
+.io-sub { font-size:10px; color:var(--text-xs); text-transform:uppercase; letter-spacing:.03em; margin:14px 0 6px; }
+
+.codecol { flex: 1; min-width: 320px; padding: 20px; overflow:auto; }
+.codecol h2, .params-block h2 { font-size:12px; font-weight:600; margin:0 0 4px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.04em; }
+.section-hint { font-size:11px; color:var(--text-xs); margin:0 0 10px; line-height:1.4; max-width:520px; }
+.stack { background: var(--block-bg); border-radius: 10px; padding: 14px 18px; max-width: 460px; }
+.blk { position:relative; padding: 10px 4px 10px 4px; margin-bottom:2px; cursor:pointer; border-radius:4px; }
+.blk.hat { cursor:default; }
+.blk .kind { font-size:10px; color: var(--text-xs); opacity:.7; text-transform:uppercase; letter-spacing:.03em; }
+.blk .name { font-size:14px; font-weight:600; }
+.blk.hat .name { color: var(--block-orange); }
+.blk.state .name { color: var(--block-blue); }
+.blk.selected { outline: 1px dashed var(--block-blue); outline-offset:2px; }
+.blk .notch { position:absolute; right:-1px; bottom:-6px; width:14px; height:12px; background: var(--block-bg); border-radius: 50%; }
+.blk-row { display:flex; align-items:center; justify-content:space-between; }
+.blk .del { background:none; border:none; color: var(--text-xs); font-size:12px; cursor:pointer; padding:2px 4px; }
+.blk .del:hover { color: var(--red); }
+
+.blk.ifblk { background: var(--block-orange); padding:0; overflow:hidden; }
+.if-hd { display:flex; align-items:center; gap:6px; padding:8px 10px; color:#3a2400; font-weight:600; font-size:13px; flex-wrap:wrap; }
+.if-hd .kw { flex-shrink:0; }
+.if-slot { background: var(--block-bg); margin: 0 8px 8px; border-radius:6px; padding:8px; min-height:14px; }
+.if-slot .empty-hint { color: var(--text-xs); font-size:11px; font-style:italic; padding:4px 2px; }
+.if-add-row { padding: 0 10px 8px; display:flex; gap:6px; }
+.if-add-row button { background:rgba(0,0,0,.15); border:none; color:#3a2400; font-size:11px; padding:3px 8px; border-radius:4px; cursor:pointer; }
+.blk.ifblk .notch { display:none; }
+.blk.ifblk.selected { outline: 1px dashed #3a2400; outline-offset:2px; }
+
+.blk.ctrlblk { background:#6D4AAF; padding:0; overflow:hidden; }
+.blk.ctrlblk .if-hd { color:#f1eaff; }
+.blk.ctrlblk .if-hd input[type=text] { background:rgba(255,255,255,.12); color:#f1eaff; border:none; border-radius:4px; padding:3px 7px; font-family:var(--mono); font-size:12px; }
+.blk.ctrlblk .notch { display:none; }
+.blk.ctrlblk.selected { outline: 1px dashed #f1eaff; outline-offset:2px; }
+.arm-row { display:flex; gap:6px; align-items:center; padding:0 10px 4px; }
+.arm-row input { background:rgba(255,255,255,.12); color:#f1eaff; border:none; border-radius:4px; padding:3px 7px; font-family:var(--mono); font-size:12px; width:120px; }
+
+.blk.stmtblk, .blk.cmtblk { background: var(--surface2); padding:6px 10px; display:flex; align-items:center; gap:6px; }
+.blk.stmtblk input, .blk.cmtblk input { flex:1; min-width:0; background:var(--bg); border:1px solid var(--border); border-radius:4px; color:var(--text); font-family:var(--mono); font-size:12px; padding:4px 7px; }
+.blk.cmtblk input { color: var(--text-dim); font-style:italic; }
+.blk.stmtblk .notch, .blk.cmtblk .notch { display:none; }
+.blk.stmtblk.selected, .blk.cmtblk.selected { outline: 1px dashed var(--block-blue); outline-offset:2px; }
+
+.params-block { margin-top: 26px; padding-top: 18px; border-top: 0.5px solid var(--border); max-width: 460px; }
+.param-row { margin-bottom:12px; }
+.param-row label { display:block; font-size:11px; color: var(--text-dim); margin-bottom:4px; }
+.param-row input { width:100%; }
+.param-empty { color: var(--text-xs); font-size:12px; }
+
+.cond-field { flex:1; min-width:0; }
+.cond-toggle { flex-shrink:0; }
+.expr-wrap { background:#1b1c20; border-radius:8px; padding:8px 10px; margin-top:6px; display:inline-block; max-width:100%; }
+.expr-err { color:var(--red); font-size:11px; margin-top:4px; }
+.expr-op { display:inline-flex; align-items:center; gap:5px; background:#2E7D32; color:#eafbe9; padding:3px 8px;
+  clip-path:polygon(7px 0,calc(100% - 7px) 0,100% 50%,calc(100% - 7px) 100%,7px 100%,0 50%); font-size:11px; font-weight:600; vertical-align:middle; }
+.expr-op select { background:transparent; border:none; color:#eafbe9; font-size:11px; font-weight:600; font-family:var(--mono); cursor:pointer; }
+.expr-op select option { color:#111; }
+.expr-unop { display:inline-flex; align-items:center; gap:4px; background:#B45309; color:#fff3e0; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:600; vertical-align:middle; }
+.expr-val { display:inline-flex; align-items:center; background:#3868D6; border-radius:999px; vertical-align:middle; }
+.expr-val input { background:transparent; border:none; color:#eaf0ff; font-size:11px; font-family:var(--mono); padding:3px 8px; width:auto; min-width:24px; }
+.expr-call { display:inline-flex; align-items:center; gap:2px; background:#6D4AAF; color:#f1eaff; padding:3px 8px; border-radius:6px; font-size:11px; vertical-align:middle; }
+.expr-idx { display:inline-flex; align-items:center; gap:2px; vertical-align:middle; }
+.expr-grp { display:inline-flex; align-items:center; gap:2px; vertical-align:middle; }
+.expr-x { background:none; border:none; color:rgba(255,255,255,.6); font-size:10px; cursor:pointer; padding:0 2px; }
+.expr-x:hover { color:#fff; }
+.expr-add { background:none; border:1px dashed rgba(255,255,255,.35); color:rgba(255,255,255,.7); font-size:10px; cursor:pointer; border-radius:4px; padding:1px 5px; margin-left:3px; }
+.expr-add:hover { color:#fff; border-color:#fff; }
+
+.newblk-form { background: var(--surface); border-radius: var(--radius); padding: 10px; margin-top:8px; }
+.newblk-form input { width:100%; margin-bottom:6px; }
+.newblk-param { display:flex; gap:4px; margin-bottom:4px; }
+.newblk-param input { flex:1; }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <a class="geri" href="/">← Ana sayfaya dön</a>
+  <h1>Aktapokus — Motion Setup</h1>
+  <div class="menu"><span>File</span><span>Edit</span><span>Debug</span></div>
+  <div class="spacer"></div>
+  <button class="runbtn" id="runBtn" title="Çalıştır (önizleme)"><i style="color:var(--green);font-size:16px">▶</i></button>
+  <button class="runbtn" id="stopBtn" title="Durdur"><i style="color:var(--red);font-size:16px">■</i></button>
+</div>
+
+<div class="import-bar">
+  <textarea id="pasteBox" placeholder="POU'nun ST kodunu (ya da <pou name=&quot;...&quot;>...</pou> içeren XML parçasını) buraya yapıştır — Input/Output otomatik ayrıştırılır."></textarea>
+  <div class="import-row">
+    <input type="text" id="pouAdiInput" placeholder="POU adı (sadece XML yapıştırıyorsan, opsiyonel)">
+    <button id="parseTopBtn">Ayrıştır (deklarasyondan)</button>
+    <button id="inferTopBtn">Kullanımdan tahmin et</button>
+    <button id="parseCodeBtn">Kodun kendisini bloklara ayır</button>
+    <span class="ok" id="parseTopOk">Ayrıştırıldı ✓</span>
+  </div>
+</div>
+<div class="err" id="pageErr"></div>
+<div class="shell">
+  <div class="pal">
+    <h3>Control</h3>
+    <button class="pal-item" id="ifPalBtn">If</button>
+    <button class="pal-item" data-ctrl="case">Case</button>
+    <button class="pal-item" data-ctrl="for">For</button>
+    <button class="pal-item" data-ctrl="while">While</button>
+    <button class="pal-item" data-ctrl="repeat">Repeat</button>
+    <button class="pal-item" data-ctrl="stmt">İfade</button>
+    <button class="pal-item" data-ctrl="comment">Yorum</button>
+    <h3 style="margin-top:18px">Blocks</h3>
+    <div id="palList"></div>
+    <button class="pal-new" id="palNewBtn">+ yeni blok tanımla</button>
+    <div id="newBlkForm"></div>
+    <h3 style="margin-top:18px">Function blocks</h3>
+    <div id="fbPalList"></div>
+  </div>
+  <div class="iopanel" id="ioPanel">
+    <button class="io-toggle" id="ioToggleBtn" title="Gizle/Göster">◂</button>
+    <div class="iopanel-body" id="ioPanelBody">
+      <div class="io-group">
+        <h2>Input</h2>
+        <p class="io-hint">Bu mantığa dışarıdan gelen sinyaller.</p>
+        <div id="inList"></div>
+        <button class="io-add sm" id="inAddBtn">+ ekle</button>
+      </div>
+      <div class="io-group">
+        <h2>Output</h2>
+        <p class="io-hint">Bu mantığın dışarı yazdığı sinyaller.</p>
+        <div id="outList"></div>
+        <button class="io-add sm" id="outAddBtn">+ ekle</button>
+      </div>
+      <div class="io-group">
+        <h2>Variables</h2>
+        <p class="io-hint">Soldaki "Function blocks" ile eklediğin zamanlayıcı/sayaçlar + "Kullanımdan tahmin et" ile koddan bulunan yerel değişkenler.</p>
+        <div id="varList"></div>
+        <div id="inferredLocalsList"></div>
+      </div>
+    </div>
+  </div>
+  <div class="codecol">
+    <h2>Code</h2>
+    <p class="section-hint">Soldaki paletten bir blok ekle, sürükleyerek sırala — bu dizilim POU'nun state sırasını (STATE_NODE zinciri) temsil eder.</p>
+    <div class="stack" id="stack"></div>
+    <div class="params-block">
+      <h2 id="paramTitle">Selected</h2>
+      <p class="section-hint">Yukarıdaki zincirde tıkladığın bloğun parametreleri burada düzenlenir.</p>
+      <div id="paramBody"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const params_ = new URLSearchParams(location.search);
+const TOKEN = params_.get('token') || '';
+function apiFetch(url, opts={}) {
+  const headers = Object.assign({}, opts.headers||{}, {'X-Aktapokus-Token': TOKEN});
+  return fetch(url, Object.assign({}, opts, {headers}));
+}
+const TOOL_BASE = '/api/tools/motionsetup';
+
+const DEFAULT_BLOCK_DEFS = [
+  { name: 'Homing', params: [{key:'timeoutMs', label:'Timeout ms', default:2000}] },
+  { name: 'Approach', params: [{key:'velocity', label:'Velocity', default:250}, {key:'timeoutMs', label:'Timeout ms', default:1500}] },
+  { name: 'Sync', params: [{key:'timeoutMs', label:'Timeout ms', default:500}] },
+  { name: 'Transfer', params: [{key:'velocity', label:'Velocity', default:300}] },
+  { name: 'Cycle Done', params: [] },
+];
+
+let blockDefs = [];
+let state = { sequence: [], inputs: [{name:'bAxisReady'},{name:'bStartCmd'},{name:'rTargetPos'}], outputs: [{name:'eCurrentState'},{name:'bDone'},{name:'bError'}], variables: [], inferredLocals: [], selected: null };
+let dragIdx = null;
+
+// IEC 61131-3 standart fonksiyon bloğu imzaları — FBD'deki gibi kullanıcı
+// sadece giriş değerlerini dolduruyor, ST çağrı satırı buradan üretiliyor.
+const FB_SIGNATURES = {
+  TON: { inputs: ['IN', 'PT'], outputs: ['Q', 'ET'] },
+  TOF: { inputs: ['IN', 'PT'], outputs: ['Q', 'ET'] },
+  CTU: { inputs: ['CU', 'R', 'PV'], outputs: ['Q', 'CV'] },
+  CTD: { inputs: ['CD', 'LD', 'PV'], outputs: ['Q', 'CV'] },
+};
+
+function mkBtn(label, title, onClick) {
+  const b = document.createElement('button'); b.type='button'; b.className='sm'; b.textContent=label; b.title=title;
+  b.onclick = (e) => { e.stopPropagation(); onClick(); };
+  return b;
+}
+
+function renderPalette() {
+  const host = document.getElementById('palList');
+  host.innerHTML = '';
+  blockDefs.forEach((def) => {
+    const b = document.createElement('button'); b.className = 'pal-item'; b.textContent = def.name;
+    b.onclick = () => addToStack(def);
+    host.appendChild(b);
+  });
+}
+
+function addToStack(def) {
+  const params = {};
+  def.params.forEach(p => params[p.key] = p.default);
+  const node = { kind: 'state', defName: def.name, params };
+  (activeSeq || state.sequence).push(node);
+  state.selected = { arr: (activeSeq || state.sequence), idx: (activeSeq || state.sequence).length - 1 };
+  renderStack();
+  renderParams();
+}
+
+function mkIfNode() {
+  return { kind: 'if', condAst: null, condText: '', then: [], else: null };
+}
+function mkCtrlNode(kind) {
+  if (kind === 'if') return mkIfNode();
+  if (kind === 'case') return { kind: 'case', expr: '', arms: [{ labels: '', body: [] }], else: null };
+  if (kind === 'for') return { kind: 'for', var: 'i', start: '1', end: '10', step: null, body: [] };
+  if (kind === 'while') return { kind: 'while', condAst: null, condText: '', body: [] };
+  if (kind === 'repeat') return { kind: 'repeat', condAst: null, condText: '', body: [] };
+  if (kind === 'stmt') return { kind: 'stmt', text: '' };
+  if (kind === 'comment') return { kind: 'comment', text: '', block: false };
+}
+
+let activeSeq = null; // yeni blok eklerken hangi diziye eklensin — bir gövdeye tıklayınca oraya odaklanır.
+
+function addCtrlNode(kind) {
+  const arr = activeSeq || state.sequence;
+  const node = mkCtrlNode(kind);
+  arr.push(node);
+  state.selected = { arr, idx: arr.length - 1 };
+  renderStack();
+  renderParams();
+}
+
+document.getElementById('ifPalBtn').onclick = () => addCtrlNode('if');
+document.querySelectorAll('.pal-item[data-ctrl]').forEach((b) => { b.onclick = () => addCtrlNode(b.dataset.ctrl); });
+
+function isSelected(arr, idx) {
+  return !!(state.selected && state.selected.arr === arr && state.selected.idx === idx);
+}
+
+function selectNode(arr, idx) {
+  activeSeq = arr;
+  state.selected = { arr, idx };
+  renderStack();
+  renderParams();
+}
+
+function removeNode(arr, idx) {
+  arr.splice(idx, 1);
+  if (state.selected && state.selected.arr === arr) {
+    if (state.selected.idx === idx) state.selected = null;
+    else if (state.selected.idx > idx) state.selected.idx -= 1;
+  }
+  renderStack();
+  renderParams();
+}
+
+function renderStack() {
+  const host = document.getElementById('stack');
+  host.innerHTML = '';
+  const hat = document.createElement('div'); hat.className = 'blk hat';
+  hat.innerHTML = '<span class="name">when flag clicked</span>';
+  hat.onclick = () => { activeSeq = state.sequence; };
+  host.appendChild(hat);
+  host.appendChild(buildList(state.sequence));
+}
+
+function buildList(arr) {
+  const wrap = document.createElement('div');
+  arr.forEach((node, idx) => wrap.appendChild(buildNode(node, arr, idx)));
+  return wrap;
+}
+
+function buildNode(node, arr, idx) {
+  if (node.kind === 'if') return buildIfBlock(node, arr, idx);
+  if (node.kind === 'case') return buildCaseBlock(node, arr, idx);
+  if (node.kind === 'for') return buildLoopBlock(node, arr, idx, 'for');
+  if (node.kind === 'while') return buildLoopBlock(node, arr, idx, 'while');
+  if (node.kind === 'repeat') return buildLoopBlock(node, arr, idx, 'repeat');
+  if (node.kind === 'stmt') return buildLineBlock(node, arr, idx, 'stmt');
+  if (node.kind === 'comment') return buildLineBlock(node, arr, idx, 'comment');
+  return buildStateBlock(node, arr, idx);
+}
+
+function mkDragHandlers(blk, arr, idx, onDropInto) {
+  blk.draggable = true;
+  blk.ondragstart = (e) => { dragIdx = { arr, idx }; e.dataTransfer.effectAllowed = 'move'; e.stopPropagation(); };
+  blk.ondragover = (e) => { e.preventDefault(); e.stopPropagation(); };
+  blk.ondrop = (e) => {
+    e.preventDefault(); e.stopPropagation();
+    if (!dragIdx || dragIdx.arr !== arr || dragIdx.idx === idx) return;
+    const [moved] = arr.splice(dragIdx.idx, 1);
+    arr.splice(dragIdx.idx < idx ? idx - 1 : idx, 0, moved);
+    selectNode(arr, idx);
+  };
+}
+
+function mkSlot(bodyArr, onDropHere) {
+  const slot = document.createElement('div'); slot.className = 'if-slot';
+  slot.onclick = (e) => { e.stopPropagation(); activeSeq = bodyArr; };
+  slot.ondragover = (e) => e.preventDefault();
+  slot.ondrop = (e) => {
+    e.preventDefault(); e.stopPropagation();
+    if (!dragIdx) return;
+    const [moved] = dragIdx.arr.splice(dragIdx.idx, 1);
+    bodyArr.push(moved);
+    renderStack(); renderParams();
+  };
+  if (bodyArr.length === 0) { const p = document.createElement('div'); p.className = 'empty-hint'; p.textContent = '(boş — soldan blok ekle)'; slot.appendChild(p); }
+  slot.appendChild(buildList(bodyArr));
+  return slot;
+}
+
+function buildLineBlock(node, arr, idx, kind) {
+  const blk = document.createElement('div'); blk.className = 'blk ' + (kind === 'stmt' ? 'stmtblk' : 'cmtblk') + (isSelected(arr, idx) ? ' selected' : '');
+  mkDragHandlers(blk, arr, idx);
+  blk.onclick = (e) => { e.stopPropagation(); selectNode(arr, idx); };
+  if (kind === 'comment') {
+    const tag = document.createElement('span'); tag.textContent = '//'; tag.style.fontSize = '11px'; tag.style.color = 'var(--text-xs)';
+    blk.appendChild(tag);
+  }
+  const inp = document.createElement('input'); inp.type = 'text'; inp.value = node.text;
+  inp.placeholder = kind === 'stmt' ? 'ifade (ör. x := 1;)' : 'yorum metni';
+  inp.onclick = (e) => e.stopPropagation();
+  inp.oninput = () => { node.text = inp.value; };
+  blk.appendChild(inp);
+  blk.appendChild(mkBtn('✕', 'sil', () => removeNode(arr, idx)));
+  return blk;
+}
+
+function buildCaseBlock(node, arr, idx) {
+  const blk = document.createElement('div'); blk.className = 'blk ctrlblk' + (isSelected(arr, idx) ? ' selected' : '');
+  mkDragHandlers(blk, arr, idx);
+  const hd = document.createElement('div'); hd.className = 'if-hd';
+  hd.onclick = (e) => { e.stopPropagation(); selectNode(arr, idx); };
+  hd.appendChild(Object.assign(document.createElement('span'), { className: 'kw', textContent: 'case' }));
+  const exprInp = document.createElement('input'); exprInp.type = 'text'; exprInp.value = node.expr; exprInp.placeholder = 'ifade';
+  exprInp.onclick = (e) => e.stopPropagation();
+  exprInp.oninput = () => { node.expr = exprInp.value; };
+  hd.appendChild(exprInp);
+  hd.appendChild(Object.assign(document.createElement('span'), { className: 'kw', textContent: 'of' }));
+  hd.appendChild(mkBtn('✕', 'case bloğunu sil', () => removeNode(arr, idx)));
+  blk.appendChild(hd);
+
+  node.arms.forEach((kol, ki) => {
+    const armRow = document.createElement('div'); armRow.className = 'arm-row';
+    const lblInp = document.createElement('input'); lblInp.type = 'text'; lblInp.value = kol.labels; lblInp.placeholder = 'etiket (ör. 10)';
+    lblInp.onclick = (e) => e.stopPropagation();
+    lblInp.oninput = () => { kol.labels = lblInp.value; };
+    armRow.appendChild(lblInp);
+    armRow.appendChild(document.createTextNode(':'));
+    armRow.appendChild(mkBtn('✕', 'kolu sil', () => { node.arms.splice(ki, 1); renderStack(); renderParams(); }));
+    blk.appendChild(armRow);
+    blk.appendChild(mkSlot(kol.body));
+  });
+  const addRow = document.createElement('div'); addRow.className = 'if-add-row';
+  const addArmBtn = document.createElement('button'); addArmBtn.textContent = '+ kol';
+  addArmBtn.onclick = (e) => { e.stopPropagation(); node.arms.push({ labels: '', body: [] }); renderStack(); renderParams(); };
+  addRow.appendChild(addArmBtn);
+  if (node.else === null) {
+    const elseBtn = document.createElement('button'); elseBtn.textContent = '+ else';
+    elseBtn.onclick = (e) => { e.stopPropagation(); node.else = []; renderStack(); renderParams(); };
+    addRow.appendChild(elseBtn);
+  }
+  blk.appendChild(addRow);
+  if (node.else !== null) {
+    const elseHd = document.createElement('div'); elseHd.className = 'if-hd';
+    elseHd.appendChild(Object.assign(document.createElement('span'), { className: 'kw', textContent: 'else' }));
+    elseHd.appendChild(mkBtn('✕', "else'i kaldır", () => { node.else = null; renderStack(); renderParams(); }));
+    blk.appendChild(elseHd);
+    blk.appendChild(mkSlot(node.else));
+  }
+  const endHd = document.createElement('div'); endHd.className = 'if-hd';
+  endHd.appendChild(Object.assign(document.createElement('span'), { className: 'kw', textContent: 'end case' }));
+  blk.appendChild(endHd);
+  return blk;
+}
+
+function buildLoopBlock(node, arr, idx, kind) {
+  const blk = document.createElement('div'); blk.className = 'blk ctrlblk' + (isSelected(arr, idx) ? ' selected' : '');
+  mkDragHandlers(blk, arr, idx);
+  const hd = document.createElement('div'); hd.className = 'if-hd';
+  hd.onclick = (e) => { e.stopPropagation(); selectNode(arr, idx); };
+  if (kind === 'for') {
+    hd.appendChild(Object.assign(document.createElement('span'), { className: 'kw', textContent: 'for' }));
+    const mkTiny = (val, ph, onInput) => { const i = document.createElement('input'); i.type = 'text'; i.value = val || ''; i.placeholder = ph; i.style.width = '54px'; i.onclick = (e) => e.stopPropagation(); i.oninput = () => onInput(i.value); return i; };
+    hd.appendChild(mkTiny(node.var, 'i', v => node.var = v));
+    hd.appendChild(document.createTextNode(':='));
+    hd.appendChild(mkTiny(node.start, '1', v => node.start = v));
+    hd.appendChild(Object.assign(document.createElement('span'), { className: 'kw', textContent: 'to' }));
+    hd.appendChild(mkTiny(node.end, '10', v => node.end = v));
+    hd.appendChild(Object.assign(document.createElement('span'), { className: 'kw', textContent: 'by' }));
+    hd.appendChild(mkTiny(node.step, '1', v => node.step = v || null));
+    hd.appendChild(Object.assign(document.createElement('span'), { className: 'kw', textContent: 'do' }));
+  } else if (kind === 'while') {
+    hd.appendChild(Object.assign(document.createElement('span'), { className: 'kw', textContent: 'while' }));
+    hd.appendChild(mkCondField(node));
+    hd.appendChild(Object.assign(document.createElement('span'), { className: 'kw', textContent: 'do' }));
+  } else {
+    hd.appendChild(Object.assign(document.createElement('span'), { className: 'kw', textContent: 'repeat' }));
+  }
+  hd.appendChild(mkBtn('✕', 'bloğu sil', () => removeNode(arr, idx)));
+  blk.appendChild(hd);
+  blk.appendChild(mkSlot(node.body));
+  if (kind === 'repeat') {
+    const untilHd = document.createElement('div'); untilHd.className = 'if-hd';
+    untilHd.appendChild(Object.assign(document.createElement('span'), { className: 'kw', textContent: 'until' }));
+    untilHd.appendChild(mkCondField(node));
+    blk.appendChild(untilHd);
+  }
+  const endHd = document.createElement('div'); endHd.className = 'if-hd';
+  endHd.appendChild(Object.assign(document.createElement('span'), { className: 'kw', textContent: 'end ' + kind }));
+  blk.appendChild(endHd);
+  return blk;
+}
+
+function buildStateBlock(inst, arr, idx) {
+  const blk = document.createElement('div'); blk.className = 'blk state' + (isSelected(arr, idx) ? ' selected' : '');
+  blk.draggable = true;
+  blk.ondragstart = (e) => { dragIdx = { arr, idx }; e.dataTransfer.effectAllowed = 'move'; e.stopPropagation(); };
+  blk.ondragover = (e) => { e.preventDefault(); e.stopPropagation(); };
+  blk.ondrop = (e) => {
+    e.preventDefault(); e.stopPropagation();
+    if (!dragIdx || dragIdx.arr !== arr || dragIdx.idx === idx) return;
+    const [moved] = arr.splice(dragIdx.idx, 1);
+    arr.splice(dragIdx.idx < idx ? idx - 1 : idx, 0, moved);
+    selectNode(arr, idx);
+  };
+  blk.onclick = (e) => { e.stopPropagation(); selectNode(arr, idx); };
+  const row = document.createElement('div'); row.className = 'blk-row';
+  const label = document.createElement('div');
+  label.innerHTML = '<div class="kind">STATE_NODE</div><div class="name">' + esc(inst.defName) + '</div>';
+  row.appendChild(label);
+  row.appendChild(mkBtn('✕', 'sil', () => removeNode(arr, idx)));
+  blk.appendChild(row);
+  const notch = document.createElement('div'); notch.className = 'notch';
+  blk.appendChild(notch);
+  return blk;
+}
+
+function buildIfBlock(node, arr, idx) {
+  const blk = document.createElement('div'); blk.className = 'blk ifblk' + (isSelected(arr, idx) ? ' selected' : '');
+  blk.draggable = true;
+  blk.ondragstart = (e) => { dragIdx = { arr, idx }; e.dataTransfer.effectAllowed = 'move'; e.stopPropagation(); };
+  blk.ondragover = (e) => { e.preventDefault(); e.stopPropagation(); };
+  blk.ondrop = (e) => {
+    e.preventDefault(); e.stopPropagation();
+    if (!dragIdx || dragIdx.arr !== arr || dragIdx.idx === idx) return;
+    const [moved] = arr.splice(dragIdx.idx, 1);
+    arr.splice(dragIdx.idx < idx ? idx - 1 : idx, 0, moved);
+    selectNode(arr, idx);
+  };
+
+  const hd = document.createElement('div'); hd.className = 'if-hd';
+  hd.onclick = (e) => { e.stopPropagation(); selectNode(arr, idx); };
+  const ifKw = document.createElement('span'); ifKw.className = 'kw'; ifKw.textContent = 'if';
+  hd.appendChild(ifKw);
+  hd.appendChild(mkCondField(node));
+  const thenKw = document.createElement('span'); thenKw.className = 'kw'; thenKw.textContent = 'then';
+  hd.appendChild(thenKw);
+  hd.appendChild(mkBtn('✕', 'if bloğunu sil', () => removeNode(arr, idx)));
+  blk.appendChild(hd);
+
+  const thenSlot = document.createElement('div'); thenSlot.className = 'if-slot';
+  thenSlot.onclick = (e) => { e.stopPropagation(); activeSeq = node.then; };
+  thenSlot.ondragover = (e) => e.preventDefault();
+  thenSlot.ondrop = (e) => {
+    e.preventDefault(); e.stopPropagation();
+    if (!dragIdx) return;
+    const [moved] = dragIdx.arr.splice(dragIdx.idx, 1);
+    node.then.push(moved);
+    renderStack(); renderParams();
+  };
+  if (node.then.length === 0) { const p = document.createElement('div'); p.className = 'empty-hint'; p.textContent = '(boş — soldan blok ekle)'; thenSlot.appendChild(p); }
+  thenSlot.appendChild(buildList(node.then));
+  blk.appendChild(thenSlot);
+
+  if (node.else !== null) {
+    const elseHd = document.createElement('div'); elseHd.className = 'if-hd';
+    const elseKw = document.createElement('span'); elseKw.className = 'kw'; elseKw.textContent = 'else';
+    elseHd.appendChild(elseKw);
+    elseHd.appendChild(mkBtn('✕', "else'i kaldır", () => { node.else = null; renderStack(); renderParams(); }));
+    blk.appendChild(elseHd);
+    const elseSlot = document.createElement('div'); elseSlot.className = 'if-slot';
+    elseSlot.onclick = (e) => { e.stopPropagation(); activeSeq = node.else; };
+    elseSlot.ondragover = (e) => e.preventDefault();
+    elseSlot.ondrop = (e) => {
+      e.preventDefault(); e.stopPropagation();
+      if (!dragIdx) return;
+      const [moved] = dragIdx.arr.splice(dragIdx.idx, 1);
+      node.else.push(moved);
+      renderStack(); renderParams();
+    };
+    if (node.else.length === 0) { const p = document.createElement('div'); p.className = 'empty-hint'; p.textContent = '(boş — soldan blok ekle)'; elseSlot.appendChild(p); }
+    elseSlot.appendChild(buildList(node.else));
+    blk.appendChild(elseSlot);
+  }
+
+  const addRow = document.createElement('div'); addRow.className = 'if-add-row';
+  if (node.else === null) {
+    const elseBtn = document.createElement('button'); elseBtn.textContent = '+ else';
+    elseBtn.onclick = (e) => { e.stopPropagation(); node.else = []; renderStack(); renderParams(); };
+    addRow.appendChild(elseBtn);
+  }
+  blk.appendChild(addRow);
+
+  return blk;
+}
+
+// ── Koşul alanı: düz metin + "🧩 blok görünümü" aç/kapa ────────────────────
+function mkCondField(node) {
+  const wrap = document.createElement('div'); wrap.style.display = 'flex'; wrap.style.flexDirection = 'column'; wrap.style.flex = '1'; wrap.style.minWidth = '0';
+  const row = document.createElement('div'); row.style.display = 'flex'; row.style.gap = '6px'; row.style.alignItems = 'center';
+  const inp = document.createElement('input'); inp.type = 'text'; inp.className = 'cond-field'; inp.value = node.condText;
+  inp.placeholder = 'koşul (ör. x > 0)';
+  inp.onclick = (e) => e.stopPropagation();
+  inp.oninput = () => { node.condText = inp.value; node.condAst = null; };
+  row.appendChild(inp);
+  const toggleBtn = mkBtn('🧩', 'blok görünümünü aç/kapa', () => toggleExprView());
+  toggleBtn.classList.add('cond-toggle');
+  row.appendChild(toggleBtn);
+  wrap.appendChild(row);
+
+  const exprHost = document.createElement('div');
+  wrap.appendChild(exprHost);
+
+  async function toggleExprView() {
+    if (exprHost.childElementCount) { exprHost.innerHTML = ''; return; }
+    if (!node.condText.trim()) { showExprErr('Önce bir koşul yaz (ör. x > 0), sonra bloklara ayır.'); return; }
+    try {
+      const r = await apiFetch(`${TOOL_BASE}/expr/parse`, {
+        method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ text: node.condText }),
+      });
+      const d = await r.json();
+      if (!d.basarili) { showExprErr(d.hata || 'Ayrıştırılamadı.'); return; }
+      node.condAst = d.ast;
+      redrawExpr();
+    } catch (e) { showExprErr(e.message); }
+  }
+  function showExprErr(msg) {
+    exprHost.innerHTML = '';
+    const e = document.createElement('div'); e.className = 'expr-err'; e.textContent = msg;
+    exprHost.appendChild(e);
+  }
+  function redrawExpr() {
+    exprHost.innerHTML = '';
+    const box = document.createElement('div'); box.className = 'expr-wrap';
+    box.appendChild(buildExprNode(node.condAst, (newAst) => {
+      node.condAst = newAst;
+      node.condText = renderExprAst(newAst);
+      inp.value = node.condText;
+      redrawExpr();
+    }));
+    exprHost.appendChild(box);
+  }
+  return wrap;
+}
+
+// ── ST ifadesi AST <-> metin (backend'deki render_st_expression'ın JS
+// aynası — blok düzenlemesi ağ isteği beklemeden anında metne dönüşsün diye) ──
+const EXPR_ONCELIK = { OR:1, XOR:1, AND:2, '=':3, '<>':3, '<':4, '>':4, '<=':4, '>=':4, '+':5, '-':5, '*':6, '/':6, MOD:6 };
+function renderExprAst(ast, disOncelik) {
+  disOncelik = disOncelik || 0;
+  if (!ast) return '';
+  if (ast.kind === 'lit') return String(ast.value || '');
+  if (ast.kind === 'var') return String(ast.name || '');
+  if (ast.kind === 'group') return '(' + renderExprAst(ast.inner) + ')';
+  if (ast.kind === 'index') return renderExprAst(ast.base) + '[' + renderExprAst(ast.index) + ']';
+  if (ast.kind === 'call') return (ast.name||'') + '(' + (ast.args||[]).map(a => renderExprAst(a)).join(', ') + ')';
+  if (ast.kind === 'unop') {
+    const ic = renderExprAst(ast.operand, 100);
+    return ast.op === 'NOT' ? ('NOT ' + ic) : ('-' + ic);
+  }
+  if (ast.kind === 'binop') {
+    const kendi = EXPR_ONCELIK[ast.op] || 0;
+    const sol = renderExprAst(ast.left, kendi);
+    const sag = renderExprAst(ast.right, kendi + 1);
+    const metin = sol + ' ' + ast.op + ' ' + sag;
+    return kendi < disOncelik ? ('(' + metin + ')') : metin;
+  }
+  return '';
+}
+
+const EXPR_OP_GRUPLARI = [
+  { label: 'Mantıksal', ops: ['AND','OR','XOR'] },
+  { label: 'Karşılaştırma', ops: ['=','<>','<','>','<=','>='] },
+  { label: 'Aritmetik', ops: ['+','-','*','/','MOD'] },
+];
+
+function buildExprNode(ast, onChange) {
+  if (!ast) ast = { kind: 'var', name: '' };
+  if (ast.kind === 'var' || ast.kind === 'lit') {
+    const span = document.createElement('span'); span.className = 'expr-val';
+    const inp = document.createElement('input'); inp.type = 'text';
+    inp.value = ast.kind === 'var' ? (ast.name || '') : (ast.value || '');
+    inp.size = Math.max(2, inp.value.length);
+    inp.oninput = () => {
+      inp.size = Math.max(2, inp.value.length);
+      if (ast.kind === 'var') ast.name = inp.value; else ast.value = inp.value;
+      onChange(ast);
+    };
+    span.appendChild(inp);
+    return span;
+  }
+  if (ast.kind === 'group') {
+    const span = document.createElement('span'); span.className = 'expr-grp';
+    span.appendChild(document.createTextNode('('));
+    span.appendChild(buildExprNode(ast.inner, (n) => { ast.inner = n; onChange(ast); }));
+    span.appendChild(document.createTextNode(')'));
+    return span;
+  }
+  if (ast.kind === 'index') {
+    const span = document.createElement('span'); span.className = 'expr-idx';
+    span.appendChild(buildExprNode(ast.base, (n) => { ast.base = n; onChange(ast); }));
+    span.appendChild(document.createTextNode('['));
+    span.appendChild(buildExprNode(ast.index, (n) => { ast.index = n; onChange(ast); }));
+    span.appendChild(document.createTextNode(']'));
+    return span;
+  }
+  if (ast.kind === 'call') {
+    const span = document.createElement('span'); span.className = 'expr-call';
+    const nameInp = document.createElement('input'); nameInp.type = 'text'; nameInp.value = ast.name || '';
+    nameInp.style.cssText = 'background:transparent;border:none;color:inherit;font-family:var(--mono);font-size:11px;width:auto;min-width:24px;padding:0';
+    nameInp.size = Math.max(2, nameInp.value.length);
+    nameInp.oninput = () => { ast.name = nameInp.value; nameInp.size = Math.max(2, nameInp.value.length); onChange(ast); };
+    span.appendChild(nameInp);
+    span.appendChild(document.createTextNode('('));
+    (ast.args || []).forEach((a, i) => {
+      if (i > 0) span.appendChild(document.createTextNode(', '));
+      span.appendChild(buildExprNode(a, (n) => { ast.args[i] = n; onChange(ast); }));
+    });
+    span.appendChild(document.createTextNode(')'));
+    return span;
+  }
+  if (ast.kind === 'unop') {
+    const span = document.createElement('span'); span.className = 'expr-unop';
+    const lbl = document.createElement('span'); lbl.textContent = ast.op === 'NOT' ? 'NOT' : '−';
+    span.appendChild(lbl);
+    span.appendChild(buildExprNode(ast.operand, (n) => { ast.operand = n; onChange(ast); }));
+    return span;
+  }
+  if (ast.kind === 'binop') {
+    const span = document.createElement('span'); span.className = 'expr-op';
+    span.appendChild(buildExprNode(ast.left, (n) => { ast.left = n; onChange(ast); }));
+    const sel = document.createElement('select');
+    EXPR_OP_GRUPLARI.forEach(g => {
+      const og = document.createElement('optgroup'); og.label = g.label;
+      g.ops.forEach(op => {
+        const o = document.createElement('option'); o.value = op; o.textContent = op;
+        if (op === ast.op) o.selected = true;
+        og.appendChild(o);
+      });
+      sel.appendChild(og);
+    });
+    sel.onchange = () => { ast.op = sel.value; onChange(ast); };
+    sel.onclick = (e) => e.stopPropagation();
+    span.appendChild(sel);
+    span.appendChild(buildExprNode(ast.right, (n) => { ast.right = n; onChange(ast); }));
+    return span;
+  }
+  const fallback = document.createElement('span'); fallback.textContent = '?';
+  return fallback;
+}
+
+function renderFbPalette() {
+  const host = document.getElementById('fbPalList');
+  host.innerHTML = '';
+  const gruplar = { TON: 'Timer (TON)', TOF: 'Timer (TOF)', CTU: 'Sayaç (CTU)', CTD: 'Sayaç (CTD)' };
+  Object.keys(FB_SIGNATURES).forEach((fbType) => {
+    const b = document.createElement('button'); b.className = 'pal-item'; b.textContent = gruplar[fbType] || fbType;
+    b.onclick = () => addVariable(fbType);
+    host.appendChild(b);
+  });
+}
+
+function addVariable(fbType) {
+  const ad = prompt(fbType + ' örneği için değişken adı (ör. ton_VakumNOK)');
+  if (!ad || !ad.trim()) return;
+  const sig = FB_SIGNATURES[fbType];
+  const vals = {};
+  sig.inputs.forEach(k => vals[k] = '');
+  state.variables.push({ name: ad.trim(), fbType, values: vals });
+  renderVariables();
+}
+
+function renderVariables() {
+  const host = document.getElementById('varList');
+  host.innerHTML = '';
+  if (state.variables.length === 0) {
+    const p = document.createElement('p'); p.className = 'param-empty'; p.textContent = 'Soldaki "Function blocks" ile bir zamanlayıcı/sayaç ekleyebilirsin.';
+    host.appendChild(p);
+    return;
+  }
+  state.variables.forEach((v, i) => {
+    const card = document.createElement('div'); card.style.border = '1px solid var(--border)'; card.style.borderRadius = '8px';
+    card.style.padding = '8px'; card.style.marginBottom = '10px';
+    const hd = document.createElement('div'); hd.style.display = 'flex'; hd.style.justifyContent = 'space-between'; hd.style.alignItems = 'center';
+    hd.style.marginBottom = '6px';
+    const title = document.createElement('div');
+    title.innerHTML = '<b style="font-family:var(--mono);font-size:12px">' + esc(v.name) + '</b> <span style="color:var(--text-dim);font-size:11px">: ' + v.fbType + '</span>';
+    hd.appendChild(title);
+    hd.appendChild(mkBtn('✕', 'sil', () => { state.variables.splice(i,1); renderVariables(); }));
+    card.appendChild(hd);
+    FB_SIGNATURES[v.fbType].inputs.forEach((k) => {
+      const row = document.createElement('div'); row.className = 'param-row';
+      const lbl = document.createElement('label'); lbl.textContent = k;
+      const inp = document.createElement('input'); inp.type = 'text'; inp.value = v.values[k] || '';
+      inp.oninput = () => { v.values[k] = inp.value; };
+      row.appendChild(lbl); row.appendChild(inp);
+      card.appendChild(row);
+    });
+    host.appendChild(card);
+  });
+}
+
+document.getElementById('parseTopBtn').onclick = async () => {
+  const errBox = document.getElementById('pageErr');
+  const okBox = document.getElementById('parseTopOk');
+  errBox.style.display = 'none'; okBox.style.display = 'none';
+  const text = document.getElementById('pasteBox').value;
+  if (!text.trim()) { errBox.textContent = 'Önce bir ST kod parçası ya da POU XML\'i yapıştır.'; errBox.style.display = 'block'; return; }
+  const pouAdi = document.getElementById('pouAdiInput').value.trim() || null;
+  try {
+    const r = await apiFetch(`${TOOL_BASE}/interface/extract`, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ xml: text, pou_adi: pouAdi }),
+    });
+    const d = await r.json();
+    if (d.hata) { errBox.textContent = d.hata + ' Alternatif olarak "Kullanımdan tahmin et"i deneyebilirsin.'; errBox.style.display = 'block'; return; }
+    if ((d.inputs || []).length === 0 && (d.outputs || []).length === 0) {
+      errBox.textContent = 'Bu metinde <interface>/inputVars/outputVars bulunamadı — POU XML parçası (<pou name="...">...</pou>) yapıştırdığından emin ol.';
+      errBox.style.display = 'block';
+      return;
+    }
+    state.inputs = (d.inputs || []).map(v => ({ name: v.name, type: v.type }));
+    state.outputs = (d.outputs || []).map(v => ({ name: v.name, type: v.type }));
+    renderIo();
+    okBox.style.display = 'inline';
+  } catch (e) {
+    errBox.textContent = e.message; errBox.style.display = 'block';
+  }
+};
+
+document.getElementById('inferTopBtn').onclick = async () => {
+  const errBox = document.getElementById('pageErr');
+  const okBox = document.getElementById('parseTopOk');
+  errBox.style.display = 'none'; okBox.style.display = 'none';
+  const text = document.getElementById('pasteBox').value;
+  if (!text.trim()) { errBox.textContent = 'Önce bir ST kod parçası yapıştır.'; errBox.style.display = 'block'; return; }
+  try {
+    const r = await apiFetch(`${TOOL_BASE}/interface/infer`, {
+      method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ text }),
+    });
+    const d = await r.json();
+    if (d.hata) { errBox.textContent = d.hata; errBox.style.display = 'block'; return; }
+    if ((d.inputs || []).length === 0 && (d.outputs || []).length === 0) {
+      errBox.textContent = 'Bu koddan hiç değişken çıkarılamadı.';
+      errBox.style.display = 'block';
+      return;
+    }
+    state.inputs = (d.inputs || []).map(v => ({ name: v.name, type: 'tahmini' }));
+    state.outputs = (d.outputs || []).map(v => ({ name: v.name, type: 'tahmini' }));
+    state.inferredLocals = (d.locals || []).map(v => ({ name: v.name }));
+    renderIo();
+    renderInferredLocals();
+    okBox.textContent = 'Tahmin edildi ✓ — kullanım şeklinden çıkarıldı, kontrol edip düzelt.';
+    okBox.style.display = 'inline';
+  } catch (e) {
+    errBox.textContent = e.message; errBox.style.display = 'block';
+  }
+};
+
+// ── Backend'in ağaç şekli (kind:if/case/for/while/repeat/stmt/comment,
+// branches/arms/elseBody/body) <-> bu sayfanın UI düğüm şekli. if'in
+// ELSIF zinciri, bu sayfada karşılığı olmadığı için iç içe else->if
+// olarak temsil ediliyor (semantik olarak eşdeğer, ayrı bir kavram
+// eklemeden).
+function treeToUiNodes(tree) {
+  return (tree || []).map(treeToUiNode);
+}
+function treeToUiNode(n) {
+  if (n.kind === 'stmt') return { kind: 'stmt', text: n.text || '' };
+  if (n.kind === 'comment') return { kind: 'comment', text: n.text || '', block: !!n.block };
+  if (n.kind === 'if') return ifChainToUi(n.branches || [], n.elseBody, 0);
+  if (n.kind === 'case') return {
+    kind: 'case', expr: n.expr || '',
+    arms: (n.arms || []).map(a => ({ labels: a.labels || '', body: treeToUiNodes(a.body) })),
+    else: n.elseBody != null ? treeToUiNodes(n.elseBody) : null,
+  };
+  if (n.kind === 'for') return { kind: 'for', var: n.var || 'i', start: n.start || '1', end: n.end || '10', step: n.step || null, body: treeToUiNodes(n.body) };
+  if (n.kind === 'while') return { kind: 'while', condAst: null, condText: n.cond || '', body: treeToUiNodes(n.body) };
+  if (n.kind === 'repeat') return { kind: 'repeat', condAst: null, condText: n.cond || '', body: treeToUiNodes(n.body) };
+  return { kind: 'stmt', text: JSON.stringify(n) };
+}
+function ifChainToUi(branches, elseBody, i) {
+  const br = branches[i] || { cond: '', body: [] };
+  const node = { kind: 'if', condAst: null, condText: br.cond || '', then: treeToUiNodes(br.body), else: null };
+  if (i + 1 < branches.length) node.else = [ifChainToUi(branches, elseBody, i + 1)];
+  else if (elseBody != null) node.else = treeToUiNodes(elseBody);
+  return node;
+}
+
+function uiNodesToTree(nodes) {
+  return (nodes || []).map(uiNodeToTree);
+}
+function uiNodeToTree(n) {
+  if (n.kind === 'stmt') return { kind: 'stmt', text: n.text };
+  if (n.kind === 'comment') return { kind: 'comment', text: n.text, block: n.block };
+  if (n.kind === 'if') return { kind: 'if', branches: [{ cond: n.condText, body: uiNodesToTree(n.then) }], elseBody: n.else != null ? uiNodesToTree(n.else) : null };
+  if (n.kind === 'case') return { kind: 'case', expr: n.expr, arms: n.arms.map(a => ({ labels: a.labels, body: uiNodesToTree(a.body) })), elseBody: n.else != null ? uiNodesToTree(n.else) : null };
+  if (n.kind === 'for') return { kind: 'for', var: n.var, start: n.start, end: n.end, step: n.step, body: uiNodesToTree(n.body) };
+  if (n.kind === 'while') return { kind: 'while', cond: n.condText, body: uiNodesToTree(n.body) };
+  if (n.kind === 'repeat') return { kind: 'repeat', cond: n.condText, body: uiNodesToTree(n.body) };
+  // 'state' (STATE_NODE) blokları backend'in ST-ağaç şemasında yok — yorum
+  // satırı olarak temsil ediyoruz ki render_st_logic hiç bozulmadan çalışsın.
+  return { kind: 'comment', block: true, text: 'STATE_NODE ' + n.defName + ' ' + JSON.stringify(n.params) };
+}
+
+document.getElementById('parseCodeBtn').onclick = async () => {
+  const errBox = document.getElementById('pageErr');
+  const okBox = document.getElementById('parseTopOk');
+  errBox.style.display = 'none'; okBox.style.display = 'none';
+  const text = document.getElementById('pasteBox').value;
+  if (!text.trim()) { errBox.textContent = 'Önce bir ST kod parçası yapıştır.'; errBox.style.display = 'block'; return; }
+  try {
+    const r = await apiFetch(`${TOOL_BASE}/logic/parse`, {
+      method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ text }),
+    });
+    const d = await r.json();
+    if (!d.basarili) { errBox.textContent = d.hata || 'Ayrıştırılamadı.'; errBox.style.display = 'block'; return; }
+    state.sequence = treeToUiNodes(d.tree);
+    state.selected = null;
+    activeSeq = state.sequence;
+    renderStack();
+    renderParams();
+    okBox.textContent = 'Kod bloklara ayrıldı ✓ — Code alanında düzenleyebilirsin.';
+    okBox.style.display = 'inline';
+  } catch (e) {
+    errBox.textContent = e.message; errBox.style.display = 'block';
+  }
+};
+
+function renderParams() {
+  const title = document.getElementById('paramTitle');
+  const body = document.getElementById('paramBody');
+  body.innerHTML = '';
+  const sel = state.selected;
+  const inst = sel && sel.arr ? sel.arr[sel.idx] : null;
+  if (!inst) {
+    title.textContent = 'Selected';
+    const p = document.createElement('p'); p.className = 'param-empty'; p.textContent = 'Bir blok seçince parametreleri burada görünür.';
+    body.appendChild(p);
+    return;
+  }
+  if (inst.kind !== 'state') {
+    const adlar = { if: 'If', case: 'Case', for: 'For', while: 'While', repeat: 'Repeat', stmt: 'İfade', comment: 'Yorum' };
+    title.textContent = 'Selected — ' + (adlar[inst.kind] || inst.kind);
+    const p = document.createElement('p'); p.className = 'param-empty';
+    p.textContent = 'Bu bloğun ayrı bir parametre paneli yok — yukarıdaki blokta doğrudan düzenle (koşullar için 🧩 ile bloklara ayırabilirsin).';
+    body.appendChild(p);
+    return;
+  }
+  title.textContent = 'Selected — ' + inst.defName;
+  const def = blockDefs.find(d => d.name === inst.defName);
+  if (!def || def.params.length === 0) {
+    const p = document.createElement('p'); p.className = 'param-empty'; p.textContent = 'Bu bloğun parametresi yok.';
+    body.appendChild(p);
+    return;
+  }
+  def.params.forEach(pd => {
+    const row = document.createElement('div'); row.className = 'param-row';
+    const lbl = document.createElement('label'); lbl.textContent = pd.label;
+    const inp = document.createElement('input'); inp.type = 'text';
+    inp.value = inst.params[pd.key] !== undefined ? inst.params[pd.key] : pd.default;
+    inp.oninput = () => { inst.params[pd.key] = inp.value; };
+    row.appendChild(lbl); row.appendChild(inp);
+    body.appendChild(row);
+  });
+}
+
+function renderIoList(hostId, list) {
+  const host = document.getElementById(hostId);
+  host.innerHTML = '';
+  list.forEach((item, i) => {
+    const row = document.createElement('div'); row.className = 'io-row';
+    const inp = document.createElement('input'); inp.type = 'text'; inp.value = item.name; inp.title = item.name;
+    inp.oninput = () => { item.name = inp.value; inp.title = inp.value; };
+    row.appendChild(inp);
+    if (item.type) {
+      const t = document.createElement('span'); t.textContent = item.type;
+      t.style.fontSize = '10px'; t.style.color = 'var(--text-xs)'; t.style.alignSelf = 'center'; t.style.whiteSpace = 'nowrap';
+      row.appendChild(t);
+    }
+    row.appendChild(mkBtn('✕', 'sil', () => { list.splice(i, 1); renderIo(); }));
+    host.appendChild(row);
+  });
+}
+function renderIo() {
+  renderIoList('inList', state.inputs);
+  renderIoList('outList', state.outputs);
+}
+
+function renderInferredLocals() {
+  const host = document.getElementById('inferredLocalsList');
+  host.innerHTML = '';
+  if (state.inferredLocals.length === 0) return;
+  const sub = document.createElement('div'); sub.className = 'io-sub'; sub.textContent = 'Koddan tahmin edilen yerel değişkenler';
+  host.appendChild(sub);
+  state.inferredLocals.forEach((item, i) => {
+    const row = document.createElement('div'); row.className = 'io-row';
+    const inp = document.createElement('input'); inp.type = 'text'; inp.value = item.name; inp.title = item.name;
+    inp.oninput = () => { item.name = inp.value; inp.title = inp.value; };
+    row.appendChild(inp);
+    row.appendChild(mkBtn('✕', 'sil', () => { state.inferredLocals.splice(i, 1); renderInferredLocals(); }));
+    host.appendChild(row);
+  });
+}
+
+document.getElementById('inAddBtn').onclick = () => { state.inputs.push({name:''}); renderIo(); };
+document.getElementById('outAddBtn').onclick = () => { state.outputs.push({name:''}); renderIo(); };
+
+document.getElementById('ioToggleBtn').onclick = () => {
+  const panel = document.getElementById('ioPanel');
+  const collapsing = !panel.classList.contains('collapsed');
+  panel.classList.toggle('collapsed');
+  document.getElementById('ioToggleBtn').textContent = collapsing ? '▸' : '◂';
+};
+
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+let newBlkParams = [];
+document.getElementById('palNewBtn').onclick = () => {
+  newBlkParams = [];
+  const host = document.getElementById('newBlkForm');
+  host.innerHTML = '';
+  const form = document.createElement('div'); form.className = 'newblk-form';
+  const nameInp = document.createElement('input'); nameInp.type = 'text'; nameInp.placeholder = 'Blok adı (ör. Approach)';
+  form.appendChild(nameInp);
+  const paramList = document.createElement('div'); form.appendChild(paramList);
+  function renderParamRows() {
+    paramList.innerHTML = '';
+    newBlkParams.forEach((p, i) => {
+      const row = document.createElement('div'); row.className = 'newblk-param';
+      const k = document.createElement('input'); k.placeholder = 'parametre adı'; k.value = p.label;
+      k.oninput = () => p.label = k.value;
+      const v = document.createElement('input'); v.placeholder = 'varsayılan'; v.value = p.default;
+      v.oninput = () => p.default = v.value;
+      row.appendChild(k); row.appendChild(v);
+      row.appendChild(mkBtn('✕', 'kaldır', () => { newBlkParams.splice(i,1); renderParamRows(); }));
+      paramList.appendChild(row);
+    });
+  }
+  renderParamRows();
+  const addParamBtn = document.createElement('button'); addParamBtn.className = 'sm'; addParamBtn.textContent = '+ parametre';
+  addParamBtn.style.marginBottom = '8px';
+  addParamBtn.onclick = () => { newBlkParams.push({label:'', default:''}); renderParamRows(); };
+  form.appendChild(addParamBtn);
+  const saveRow = document.createElement('div'); saveRow.style.display = 'flex'; saveRow.style.gap = '6px';
+  const saveBtn = document.createElement('button'); saveBtn.className = 'sm'; saveBtn.textContent = 'Kaydet';
+  saveBtn.onclick = async () => {
+    const name = nameInp.value.trim();
+    if (!name) return;
+    const def = { name, params: newBlkParams.filter(p => p.label.trim()).map(p => ({ key: p.label.trim(), label: p.label.trim(), default: p.default })) };
+    blockDefs.push(def);
+    renderPalette();
+    host.innerHTML = '';
+    await persistBlockDefs();
+  };
+  const cancelBtn = document.createElement('button'); cancelBtn.className = 'sm'; cancelBtn.textContent = 'İptal';
+  cancelBtn.onclick = () => { host.innerHTML = ''; };
+  saveRow.appendChild(saveBtn); saveRow.appendChild(cancelBtn);
+  form.appendChild(saveRow);
+  host.appendChild(form);
+};
+
+async function persistBlockDefs() {
+  try {
+    await apiFetch(`${TOOL_BASE}/custom-blocks`, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ bloklar: blockDefs }),
+    });
+  } catch (e) { /* yerel state zaten güncel, kalıcı yazım başarısız olsa da devam edilebilir */ }
+}
+
+async function loadBlockDefs() {
+  try {
+    const r = await apiFetch(`${TOOL_BASE}/custom-blocks`);
+    const d = await r.json();
+    blockDefs = (d.bloklar && d.bloklar.length) ? d.bloklar : DEFAULT_BLOCK_DEFS.slice();
+  } catch (e) {
+    blockDefs = DEFAULT_BLOCK_DEFS.slice();
+  }
+  renderPalette();
+}
+
+document.getElementById('runBtn').onclick = async () => {
+  const errBox = document.getElementById('pageErr');
+  if (state.sequence.length === 0 && state.variables.length === 0) {
+    errBox.textContent = 'Önce en az bir STATE_NODE, if/case/... bloğu ya da değişken ekle.';
+    errBox.style.display = 'block';
+    return;
+  }
+  errBox.style.display = 'none';
+  let govdeMetni = '';
+  try {
+    const r = await apiFetch(`${TOOL_BASE}/logic/render`, {
+      method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ nodes: uiNodesToTree(state.sequence) }),
+    });
+    const d = await r.json();
+    govdeMetni = d.basarili ? d.kod : ('(* gövde üretilemedi: ' + (d.hata || '?') + ' *)');
+  } catch (e) {
+    govdeMetni = '(* gövde üretilemedi: ' + e.message + ' *)';
+  }
+  let varMetni = '';
+  if (state.variables.length) {
+    varMetni += 'VAR\n';
+    state.variables.forEach(v => varMetni += '\t' + v.name + ' : ' + v.fbType + ';\n');
+    varMetni += 'END_VAR\n\n';
+    state.variables.forEach(v => {
+      const sig = FB_SIGNATURES[v.fbType];
+      const args = sig.inputs.map(k => k + ':=' + (v.values[k] || '')).join(', ');
+      varMetni += v.name + '(' + args + ');\n';
+    });
+  }
+  alert('ST Kodu Önizleme:\n\n' + varMetni + govdeMetni);
+};
+document.getElementById('stopBtn').onclick = () => {};
+
+renderStack();
+renderParams();
+renderIo();
+renderFbPalette();
+renderVariables();
+loadBlockDefs();
+try { document.documentElement.dataset.theme = localStorage.getItem('aktapokus-theme') || 'light'; } catch(e) {}
+if (!TOKEN) {
+  document.getElementById('pageErr').textContent = 'Token bulunamadı — bu sayfayı Motion Setup panelindeki "Logic Editor" bağlantısından aç.';
+  document.getElementById('pageErr').style.display = 'block';
+}
+</script>
+</body>
+</html>

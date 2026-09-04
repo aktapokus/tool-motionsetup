@@ -1,0 +1,2502 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>Motion Setup — Logic Editor</title>
+<script src="https://unpkg.com/blockly/blockly_compressed.js"></script>
+<script src="https://unpkg.com/blockly/blocks_compressed.js"></script>
+<script src="https://unpkg.com/blockly/msg/tr.js"></script>
+<style>
+  body { font-family: sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; }
+  h2 { margin: 8px 12px; font-size: 15px; display: flex; align-items: center; gap: 10px; }
+  #langToggle { font-size: 11px; padding: 3px 8px; cursor: pointer; border: 1px solid #ccc; border-radius: 4px; background: #fff; }
+  #backHome { font-size: 13px; color: #555; text-decoration: none; }
+  #backHome:hover { text-decoration: underline; }
+  #main { flex: 1; display: flex; min-height: 0; }
+  #varListPanel { width: 220px; flex: 0 0 auto; min-width: 140px; max-width: 480px; border-right: 1px solid #ccc; padding: 4px 0; font-size: 12px; display: flex; flex-direction: column; min-height: 0; }
+  #varListPanel details { border-bottom: 1px solid #e5e5e5; flex-shrink: 0; }
+  #varListPanel details[open] { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+  #varListPanel summary { padding: 6px 8px; font-size: 11px; color: #555; text-transform: uppercase; letter-spacing: .03em; cursor: pointer; user-select: none; }
+  #varListPanel summary:hover { background: #f2f2f2; }
+  .varlist-ta {
+    display: block; width: 100%; box-sizing: border-box; min-height: 70px; flex: 1; resize: vertical;
+    font-family: monospace; font-size: 11px; line-height: 1.5; padding: 4px 8px;
+    border: none; border-top: 1px solid #eee; background: #fafafa;
+  }
+  .type-ac-dropdown {
+    position: absolute; z-index: 50; min-width: 90px; max-height: 140px; overflow-y: auto;
+    background: #fff; border: 1px solid #9ab8e0; border-radius: 3px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15); font-family: monospace; font-size: 11px;
+  }
+  .type-ac-item { padding: 3px 8px; cursor: pointer; white-space: nowrap; }
+  .type-ac-item:hover, .type-ac-item.active { background: #4a7ac9; color: #fff; }
+  #varListResizer { flex: 0 0 6px; cursor: col-resize; background: #ddd; }
+  #varListResizer:hover, #varListResizer.dragging { background: #9ab8e0; }
+  #blocklyDiv { flex: 1; min-width: 100px; }
+  #resizer { flex: 0 0 6px; cursor: col-resize; background: #ddd; }
+  #resizer:hover, #resizer.dragging { background: #9ab8e0; }
+  #out { width: 420px; flex: 0 0 auto; min-width: 200px; max-width: 80vw; border-left: 1px solid #ccc; padding: 8px; overflow: auto; }
+  pre { background: #1e1e1e; color: #d4d4d4; padding: 8px; white-space: pre; overflow-x: auto; font-size: 11px; line-height: 1.5; min-height: 100px; max-width: 100%; box-sizing: border-box; }
+  #outLabel, #declLabel { font-size: 12px; }
+  #varBar { flex-shrink: 0; flex-wrap: wrap; padding: 8px 12px; background: #f2f2f2; border-bottom: 1px solid #ccc; display: flex; gap: 8px; align-items: flex-start; }
+  #varInput { flex: 1; min-width: 300px; height: 60px; font-family: monospace; font-size: 11px; resize: vertical; }
+  #varBar button { height: 28px; align-self: center; font-size: 12px; }
+  #varResult { flex-basis: 100%; font-size: 11px; color: #333; margin-top: 4px; }
+  #parseCodeResult { flex-basis: 100%; font-size: 11px; color: #333; }
+  #declBox { margin-top: 14px; }
+  #declBoxHead { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  #declRegenBtn { font-size: 11px; padding: 2px 8px; height: 22px; }
+  #declWarning { display: none; background: #fff3cd; border: 1px solid #e0c46c; color: #6b5300; border-radius: 4px; padding: 6px 8px; font-size: 11px; margin-bottom: 6px; margin-top: 4px; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .decl-add-left-btn { font-size: 11px; padding: 2px 8px; cursor: pointer; border: 1px solid #e0c46c; background: #fff; border-radius: 3px; color: #6b5300; }
+  .decl-add-left-btn:hover { background: #ffe9a8; }
+  #declOut {
+    display: block; width: 100%; min-height: 140px; resize: vertical;
+    background: #1e1e1e; color: #d4d4d4; padding: 8px; font-family: monospace;
+    font-size: 11px; line-height: 1.5; white-space: pre; overflow: auto;
+    box-sizing: border-box; border: 1px solid #444;
+  }
+</style>
+</head>
+<body>
+<h2><a id="backHome" href="/">←</a><span id="pageTitle">Motion Setup — Logic Editor</span><button id="langToggle" type="button">EN</button></h2>
+<div id="varBar">
+  <textarea id="varInput"></textarea>
+  <button id="parseVarBtn"></button>
+  <button id="parseCodeBtn"></button>
+  <div id="varResult"></div>
+  <div id="parseCodeResult"></div>
+</div>
+<div id="main">
+  <div id="varListPanel">
+    <details id="varDetailsInput">
+      <summary id="varListInputLabel"></summary>
+      <textarea id="varListInput" class="varlist-ta" spellcheck="false" wrap="off"></textarea>
+    </details>
+    <details id="varDetailsOutput">
+      <summary id="varListOutputLabel"></summary>
+      <textarea id="varListOutput" class="varlist-ta" spellcheck="false" wrap="off"></textarea>
+    </details>
+    <details id="varDetailsLocal">
+      <summary id="varListLocalLabel"></summary>
+      <textarea id="varListLocal" class="varlist-ta" spellcheck="false" wrap="off"></textarea>
+    </details>
+  </div>
+  <div id="varListResizer"></div>
+  <div id="blocklyDiv"></div>
+  <div id="resizer"></div>
+  <div id="out">
+    <b id="outLabel"></b>
+    <pre id="stOut"></pre>
+    <div id="declBox">
+      <div id="declBoxHead">
+        <b id="declLabel"></b>
+        <button id="declRegenBtn" type="button"></button>
+      </div>
+      <div id="declWarning"></div>
+      <textarea id="declOut" spellcheck="false" wrap="off"></textarea>
+    </div>
+  </div>
+</div>
+
+<xml id="toolbox" style="display:none">
+  <category id="catControl" name="Kontrol" colour="25">
+    <block type="st_if"></block>
+    <block type="st_case"></block>
+    <block type="st_for"></block>
+    <block type="st_continue"></block>
+  </category>
+  <category id="catCalls" name="Çağrılar" colour="285">
+    <block type="st_call"></block>
+    <block type="st_timer"></block>
+  </category>
+  <category id="catLogic" name="Mantık / Değer" colour="210">
+    <block type="st_compare"></block>
+    <block type="st_logic"></block>
+    <block type="st_not"></block>
+    <block type="st_math"></block>
+    <block type="st_time_lit"></block>
+    <block type="st_expr_call"></block>
+    <block type="math_number"></block>
+    <block type="st_assign"></block>
+    <block type="st_var"></block>
+    <block type="st_comment"></block>
+  </category>
+</xml>
+
+<script>
+// =====================================================================
+// i18n — proje kalıbı: localStorage['aktapokus-docs-lang'] + core'un
+// /api/tools/{id}/locale/{lang} endpoint'i (bkz. aktapokus-core/core/api.py).
+// Bu sayfa panel.js'in mount() bağlamının dışında (window.open ile ayrı
+// sekmede açılıyor), o yüzden kendi küçük t()/fallback mekanizmasını
+// kuruyor — panel.js'teki T_FALLBACK deseniyle aynı fikir.
+// =====================================================================
+const TOOL_ID = "motionsetup";
+const urlParams = new URLSearchParams(location.search);
+const AUTH_TOKEN = urlParams.get("token") || "";
+
+const T_FALLBACK_TR = {
+  page_title: "Motion Setup — Logic Editor",
+  lang_toggle: "EN",
+  back_home: "← Ana sayfaya dön",
+  var_input_placeholder: "VAR_INPUT\n    i_xVar1 : BOOL;\n    i_xVar2 : BOOL;\nEND_VAR\nVAR_OUTPUT\n    q_xOut1 : BOOL;\nEND_VAR\n(deklarasyon bloklarını ya da gövde/mantık kodunu buraya yapıştır)",
+  parse_var_btn: "Değişkenleri Ayrıştır",
+  parse_code_btn: "Kodu Bloklara Çevir",
+  cat_control: "Kontrol",
+  cat_calls: "Çağrılar",
+  cat_logic: "Mantık / Değer",
+  cat_input: "Girişler (Input)",
+  cat_output: "Çıkışlar (Output)",
+  cat_local: "Yerel / Diğer",
+  cat_robot: "Robot",
+  cat_motion: "Motion",
+  out_section_label: "— ÇIKIŞ —",
+  output_label: "Üretilen ST:",
+  output_placeholder: "// bloğu sürükleyip koşulu doldurun",
+  decl_label: "Değişken Deklarasyonları (düzenlenebilir):",
+  decl_placeholder: "// blokları kullandıkça burada VAR_INPUT/VAR_OUTPUT/VAR deklarasyonları oluşur — elle düzenleyebilir, STRUCT tanımları ekleyebilirsin",
+  decl_regenerate_btn: "Yeniden Oluştur",
+  decl_new_var_tpl: "⚠ {count} yeni/tipi bilinmeyen değişken var (aşağıda \"// YENİ\" ile işaretli) — gerçek programına eklemeden önce tiplerini kontrol et!",
+  struct_found_tpl: "({count} STRUCT tipi tanımı bulundu)",
+  no_vars_found: "Hiç değişken bulunamadı.",
+  mode_decl: "deklarasyondan",
+  mode_usage: "kullanımdan (deklarasyon bulunamadı, önek + okuma/yazma sezgisiyle)",
+  vars_found_tpl: "{count} değişken bulundu ({mode}) — {input} giriş, {output} çıkış, {local} yerel/diğer. Soldaki listede \"ad : tip;\" olarak görüntüleniyor, elle düzenleyebilirsin.",
+  parse_code_empty: "Kod boş ya da hiç ifade bulunamadı.",
+  parse_code_fail_tpl: "Ayrıştırma hemen başarısız oldu: {error} — bağlam: {context}",
+  parse_code_xml_fail_tpl: "Blok XML'i yüklenirken hata: {error}",
+  parse_code_ok_tpl: "{count} üst-seviye blok başarıyla oluşturuldu.",
+  parse_code_partial_tpl: "{count} blok oluşturuldu, sonra ayrıştırma durdu: {error} — bağlam: {context}",
+  tooltip_if: "Sağ tık: ELSIF/ELSE ekle-sil",
+  tooltip_case: "Sağ tık: kol ekle/sil",
+  tooltip_call: "Sağ tık: parametre ekle/sil",
+  tooltip_math: "Aritmetik işlem (+, -, *, /, MOD) — bir sayısal değer üretir",
+  orphan_value_block_tpl: "bağlı değil (bir atamanın sağına ya da bir parametreye sürükle): {code}",
+  decl_add_to_left_btn: "Sol listeye ekle",
+  tooltip_exprcall: "Sağ tık: parametre ekle/sil — değer döndüren çağrı (statement değil)",
+  tooltip_timer: "Çıkışları (.Q / .ET) okumak için \"Değişken\" bloğuna instance.Q yaz",
+  ctx_add_elseif: "ELSIF kolu ekle",
+  ctx_remove_elseif: "Son ELSIF kolunu sil",
+  ctx_add_else: "ELSE kolu ekle",
+  ctx_remove_else: "ELSE kolunu kaldır",
+  ctx_add_case: "Case kolu ekle",
+  ctx_remove_case: "Son case kolunu sil",
+  ctx_add_param: "Parametre ekle",
+  ctx_remove_param: "Son parametreyi sil",
+  ctx_remove_param_named: "Parametreyi sil: {name}"
+};
+
+const T_FALLBACK_EN = {
+  page_title: "Motion Setup — Logic Editor",
+  lang_toggle: "TR",
+  back_home: "← Back to home",
+  var_input_placeholder: "VAR_INPUT\n    i_xVar1 : BOOL;\n    i_xVar2 : BOOL;\nEND_VAR\nVAR_OUTPUT\n    q_xOut1 : BOOL;\nEND_VAR\n(paste declaration blocks or plain body/logic code here)",
+  parse_var_btn: "Extract Variables",
+  parse_code_btn: "Convert Code to Blocks",
+  cat_control: "Control",
+  cat_calls: "Calls",
+  cat_logic: "Logic / Value",
+  cat_input: "Inputs",
+  cat_output: "Outputs",
+  cat_local: "Local / Other",
+  cat_robot: "Robot",
+  cat_motion: "Motion",
+  out_section_label: "— OUT —",
+  output_label: "Generated ST:",
+  output_placeholder: "// drag a block in and fill the condition",
+  decl_label: "Variable Declarations (editable):",
+  decl_placeholder: "// VAR_INPUT/VAR_OUTPUT/VAR declarations will appear here as you use blocks — edit freely, add STRUCT definitions",
+  decl_regenerate_btn: "Regenerate",
+  decl_new_var_tpl: "⚠ {count} new/unknown-type variable(s) found (marked \"// NEW\" below) — check their types before adding them to your real program!",
+  struct_found_tpl: "({count} STRUCT type definition(s) found)",
+  no_vars_found: "No variables found.",
+  mode_decl: "from declarations",
+  mode_usage: "from usage (no declarations found, prefix + read/write heuristic)",
+  vars_found_tpl: "{count} variables found ({mode}) — {input} inputs, {output} outputs, {local} local/other. Shown on the left as \"name : type;\" — edit freely.",
+  parse_code_empty: "Code is empty or no statements were found.",
+  parse_code_fail_tpl: "Parsing failed immediately: {error} — context: {context}",
+  parse_code_xml_fail_tpl: "Error loading block XML: {error}",
+  parse_code_ok_tpl: "{count} top-level block(s) created successfully.",
+  parse_code_partial_tpl: "{count} block(s) created, then parsing stopped: {error} — context: {context}",
+  tooltip_if: "Right-click: add/remove ELSIF/ELSE",
+  tooltip_case: "Right-click: add/remove arm",
+  tooltip_call: "Right-click: add/remove parameter",
+  tooltip_math: "Arithmetic operation (+, -, *, /, MOD) — produces a numeric value",
+  orphan_value_block_tpl: "not connected (drag it onto the right side of an assignment or a parameter): {code}",
+  decl_add_to_left_btn: "Add to left list",
+  tooltip_exprcall: "Right-click: add/remove parameter — value-returning call (not a statement)",
+  tooltip_timer: "To read outputs (.Q / .ET) write instance.Q into a \"Variable\" block",
+  ctx_add_elseif: "Add ELSIF arm",
+  ctx_remove_elseif: "Remove last ELSIF arm",
+  ctx_add_else: "Add ELSE",
+  ctx_remove_else: "Remove ELSE",
+  ctx_add_case: "Add case arm",
+  ctx_remove_case: "Remove last case arm",
+  ctx_add_param: "Add parameter",
+  ctx_remove_param: "Remove last parameter",
+  ctx_remove_param_named: "Remove parameter: {name}"
+};
+
+function currentLang() {
+  return localStorage.getItem("aktapokus-docs-lang") === "en" ? "en" : "tr";
+}
+
+let LOCALE = {};
+
+// Bu paylaşılan durum değişkenleri BİLEREK burada, dosyanın en başında —
+// applyStaticI18n()/renderVarLists() sayfa yüklenir yüklenmez (main()'in ilk
+// satırlarında) çağrılıyor ve bunlara erişiyor; kullanıldıkları yerin YAKININA
+// koyulsalardı (daha "doğal" dursa da) TDZ hatası olurdu — bu tam olarak bu
+// oturumda birkaç kez yaşanan gerçek bir hataydı, bilerek buraya alındı.
+let extractedVars = { input: [], output: [], local: [] };
+let declManuallyEdited = false;
+// "Sol listeye ekle" butonunun hangi değişkenleri ekleyeceğini bilmesi için
+// renderDeclarations()'ın en son hesapladığı "yeni" değişken listesi —
+// aynı TDZ deseni yüzünden (renderDeclarations render() ile ÇOK ERKEN
+// çağrılıyor) burada, dosyanın başında tanımlı.
+let latestNewVars = [];
+// parseStToBlockXml (aşağıda tanımlı) satır-sonu yorumları taşımak için bu
+// iki işaretçiyi kullanıyor — "Robot"/"Motion" toolbox şablonlarını inşa
+// eden kod (installTemplateCategories) parseStToBlockXml'i Blockly.inject'ten
+// ÖNCE, yani bunların eski konumundan (dosyanın çok daha aşağısı) ÖNCE
+// çağırıyordu; TDZ nedeniyle preprocessStSource içeride ReferenceError
+// atıyor, parseStToBlockXml'in kendi try/catch'i bunu SESSİZCE yutup boş
+// sonuç döndürüyordu (toolbox kategorileri boş kalıyordu, hiçbir konsol
+// hatası da yoktu). Aynı TDZ deseni bu oturumda daha önce de yaşandığı için
+// aynı çözüm: paylaşılan sabitleri dosyanın en başına alıyoruz.
+const TRAIL_START = String.fromCharCode(1);
+const TRAIL_END = String.fromCharCode(2);
+
+async function loadLocale(lang) {
+  const fallback = lang === "en" ? T_FALLBACK_EN : T_FALLBACK_TR;
+  try {
+    const res = await fetch("/api/tools/" + TOOL_ID + "/locale/" + lang + "?token=" + encodeURIComponent(AUTH_TOKEN));
+    if (!res.ok) return fallback;
+    const server = await res.json();
+    return Object.assign({}, fallback, server);
+  } catch (e) {
+    return fallback;
+  }
+}
+
+function t(key, vars) {
+  let s = LOCALE[key];
+  if (s === undefined || s === null) s = key;
+  if (vars) for (const k in vars) s = s.split("{" + k + "}").join(vars[k]);
+  return s;
+}
+
+function applyStaticI18n() {
+  document.title = t("page_title");
+  document.getElementById("pageTitle").textContent = t("page_title");
+  document.getElementById("langToggle").textContent = t("lang_toggle");
+  document.getElementById("backHome").textContent = t("back_home");
+  document.getElementById("varInput").placeholder = t("var_input_placeholder");
+  document.getElementById("parseVarBtn").textContent = t("parse_var_btn");
+  document.getElementById("parseCodeBtn").textContent = t("parse_code_btn");
+  document.getElementById("outLabel").textContent = t("output_label");
+  document.getElementById("stOut").textContent = t("output_placeholder");
+  document.getElementById("declLabel").textContent = t("decl_label");
+  document.getElementById("declOut").placeholder = t("decl_placeholder");
+  document.getElementById("declRegenBtn").textContent = t("decl_regenerate_btn");
+  document.getElementById("catControl").setAttribute("name", t("cat_control"));
+  document.getElementById("catCalls").setAttribute("name", t("cat_calls"));
+  document.getElementById("catLogic").setAttribute("name", t("cat_logic"));
+  document.getElementById("varListInputLabel").textContent = t("cat_input");
+  document.getElementById("varListOutputLabel").textContent = t("cat_output");
+  document.getElementById("varListLocalLabel").textContent = t("cat_local");
+}
+
+document.getElementById("langToggle").addEventListener("click", function () {
+  const next = currentLang() === "en" ? "tr" : "en";
+  localStorage.setItem("aktapokus-docs-lang", next);
+  location.reload();
+});
+
+// =====================================================================
+// Ana başlatma — locale yüklenene KADAR Blockly enjekte edilmiyor, çünkü
+// blok tooltip/sağ-tık metinleri init() içinde t() ile üretiliyor.
+// =====================================================================
+(async function main() {
+  LOCALE = await loadLocale(currentLang());
+  applyStaticI18n();
+  renderVarLists();
+
+// --- st_var'ın NAME alanı için değişken adı otomatik tamamlama: tuvalde
+// bir bloğun içine (ör. bir matematik işleminin A/B yuvasına) bir değişken
+// adı yazarken, GİRİŞLER/ÇIKIŞLAR/YEREL panellerinde zaten bilinen
+// değişkenleri Visual Studio Code'daki IntelliSense gibi öneriyor. Yeni
+// (henüz deklare edilmemiş) bir isim yazmaya devam etmek de serbest —
+// sadece BİLİNENLERİ önerip yazmayı engellemiyoruz.
+function getKnownVarNames() {
+  const names = [];
+  const seen = new Set();
+  ["input", "output", "local"].forEach(function (bucket) {
+    (extractedVars[bucket] || []).forEach(function (v) {
+      if (!seen.has(v.name)) { seen.add(v.name); names.push(v.name); }
+    });
+  });
+  return names;
+}
+
+function attachFieldAutocomplete(field) {
+  const inputEl = field.htmlInput_;
+  if (!inputEl) return;
+  const dropdown = document.createElement("div");
+  dropdown.className = "type-ac-dropdown";
+  dropdown.style.position = "fixed";
+  dropdown.style.display = "none";
+  document.body.appendChild(dropdown);
+
+  let matches = [];
+  let activeIndex = -1;
+  let closed = false;
+
+  function close() {
+    if (closed) return;
+    closed = true;
+    document.removeEventListener("keydown", onKeydown, true);
+    if (dropdown.parentNode) dropdown.parentNode.removeChild(dropdown);
+  }
+
+  function renderList() {
+    dropdown.innerHTML = "";
+    matches.forEach(function (name, idx) {
+      const item = document.createElement("div");
+      item.className = "type-ac-item" + (idx === activeIndex ? " active" : "");
+      item.textContent = name;
+      item.addEventListener("mousedown", function (e) { e.preventDefault(); commit(name); });
+      dropdown.appendChild(item);
+    });
+  }
+
+  function commit(name) {
+    inputEl.value = name;
+    inputEl.dispatchEvent(new Event("input", { bubbles: true }));
+    inputEl.blur();
+    close();
+  }
+
+  function update() {
+    const typed = inputEl.value;
+    if (!typed) { dropdown.style.display = "none"; matches = []; return; }
+    const upper = typed.toUpperCase();
+    matches = getKnownVarNames().filter(function (n) {
+      return n.toUpperCase().indexOf(upper) === 0 && n.toUpperCase() !== upper;
+    });
+    if (!matches.length) { dropdown.style.display = "none"; return; }
+    activeIndex = 0;
+    const rect = inputEl.getBoundingClientRect();
+    dropdown.style.left = rect.left + "px";
+    dropdown.style.top = rect.bottom + "px";
+    dropdown.style.display = "block";
+    renderList();
+  }
+
+  function onKeydown(e) {
+    if (dropdown.style.display === "none") return;
+    if (e.key === "ArrowDown") { e.preventDefault(); activeIndex = Math.min(matches.length - 1, activeIndex + 1); renderList(); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); activeIndex = Math.max(0, activeIndex - 1); renderList(); }
+    else if (e.key === "Tab") { if (activeIndex >= 0) { e.preventDefault(); commit(matches[activeIndex]); } }
+    else if (e.key === "Escape") { dropdown.style.display = "none"; }
+    // Enter'ı BİLEREK yakalamıyoruz — Blockly'nin kendi Enter davranışı
+    // (editörü mevcut yazılan değerle commit edip kapatması) korunuyor,
+    // ona müdahale etmek yeni bir hataya yol açabilirdi.
+  }
+
+  inputEl.addEventListener("input", update);
+  document.addEventListener("keydown", onKeydown, true);
+  inputEl.addEventListener("blur", function () { setTimeout(close, 150); });
+}
+
+class FieldVarAutocomplete extends Blockly.FieldTextInput {
+  showEditor_(e) {
+    Blockly.FieldTextInput.prototype.showEditor_.call(this, e);
+    attachFieldAutocomplete(this);
+  }
+  static fromJson(options) {
+    return new FieldVarAutocomplete(options["text"]);
+  }
+}
+Blockly.fieldRegistry.register("field_var_autocomplete", FieldVarAutocomplete);
+
+// --- Tek özel blok: IF ... THEN ... END_IF (ST'ye özel, PLC anlamında) ---
+// --- Blok renkleri KATEGORİYE göre gruplanıyor (birbirine benzemeyen
+// bloklar birbirine karışmasın diye — önceden çoğu rastgele/çakışan hue
+// kullanıyordu, ör. st_for ve st_continue ikisi de kırmızıydı):
+//   25  turuncu  = kontrol akışı   (IF, CASE, FOR, CONTINUE)
+//   160 yeşil    = atama           (ASSIGN)
+//   210 mavi     = mantık/karşılaştırma (COMPARE, LOGIC, NOT)
+//   60  sarı     = değer/sabit     (VAR, TIME_LIT)
+//   285 mor      = çağrı (statement)  (CALL, TIMER)
+//   255 mor-mavi = çağrı (değer döndüren) (EXPR_CALL)
+//   0   kırmızı  = yorum           (COMMENT) — artık sadece bunda kullanılıyor
+Blockly.defineBlocksWithJsonArray([
+  {
+    "type": "st_compare",
+    "message0": "%1 %2 %3",
+    "args0": [
+      { "type": "input_value", "name": "A" },
+      { "type": "field_dropdown", "name": "OP", "options": [["=", "="], ["<>", "<>"], ["<", "<"], [">", ">"], ["<=", "<="], [">=", ">="]] },
+      { "type": "input_value", "name": "B" }
+    ],
+    "inputsInline": true,
+    "output": "Boolean",
+    "colour": 210,
+    "tooltip": t('tooltip_compare')
+  },
+  {
+    "type": "st_logic",
+    "message0": "%1 %2 %3",
+    "args0": [
+      { "type": "input_value", "name": "A", "check": "Boolean" },
+      { "type": "field_dropdown", "name": "OP", "options": [["AND", "AND"], ["OR", "OR"], ["XOR", "XOR"]] },
+      { "type": "input_value", "name": "B", "check": "Boolean" }
+    ],
+    "inputsInline": true,
+    "output": "Boolean",
+    "colour": 210,
+    "tooltip": t('tooltip_logic')
+  },
+  {
+    "type": "st_not",
+    "message0": "NOT %1",
+    "args0": [{ "type": "input_value", "name": "A", "check": "Boolean" }],
+    "inputsInline": true,
+    "output": "Boolean",
+    "colour": 210,
+    "tooltip": t('tooltip_not')
+  },
+  {
+    "type": "st_math",
+    "message0": "%1 %2 %3",
+    "args0": [
+      { "type": "input_value", "name": "A" },
+      { "type": "field_dropdown", "name": "OP", "options": [["+", "+"], ["-", "-"], ["*", "*"], ["/", "/"], ["MOD", "MOD"]] },
+      { "type": "input_value", "name": "B" }
+    ],
+    "inputsInline": true,
+    "output": null,
+    "colour": 60,
+    "tooltip": t('tooltip_math')
+  },
+  {
+    "type": "st_var",
+    "message0": "%1",
+    "args0": [{ "type": "field_var_autocomplete", "name": "NAME", "text": "i_xVar" }],
+    "output": null,
+    "colour": 60,
+    "tooltip": t('tooltip_var')
+  },
+  {
+    "type": "st_comment",
+    "message0": "// %1",
+    "args0": [{ "type": "field_input", "name": "TXT", "text": "yorum" }],
+    "previousStatement": null,
+    "nextStatement": null,
+    "colour": 0,
+    "tooltip": t('tooltip_comment')
+  },
+  {
+    "type": "st_assign",
+    "message0": "%1 := %2",
+    "args0": [
+      { "type": "field_input", "name": "NAME", "text": "q_xOut" },
+      { "type": "input_value", "name": "VALUE" }
+    ],
+    "inputsInline": true,
+    "previousStatement": null,
+    "nextStatement": null,
+    "colour": 160,
+    "tooltip": t('tooltip_assign')
+  },
+  {
+    "type": "st_for",
+    "message0": "FOR %1 := %2 TO %3 DO %4",
+    "args0": [
+      { "type": "field_input", "name": "VAR", "text": "i" },
+      { "type": "input_value", "name": "START" },
+      { "type": "input_value", "name": "END" },
+      { "type": "input_statement", "name": "DO" }
+    ],
+    "previousStatement": null,
+    "nextStatement": null,
+    "colour": 25,
+    "tooltip": t('tooltip_for')
+  },
+  {
+    "type": "st_continue",
+    "message0": "CONTINUE",
+    "previousStatement": null,
+    "nextStatement": null,
+    "colour": 25,
+    "tooltip": t('tooltip_continue')
+  }
+]);
+
+// --- st_if: IF/THEN sabit, ELSIF kolları + opsiyonel ELSE dinamik (sağ-tık) ---
+Blockly.Blocks['st_if'] = {
+  init: function () {
+    this.elseifCount_ = 0;
+    this.hasElse_ = false;
+    this.appendValueInput('IF0').appendField('IF').setCheck('Boolean');
+    this.appendStatementInput('DO0').appendField('THEN');
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setColour(25);
+    this.setTooltip(t('tooltip_if'));
+  },
+  mutationToDom: function () {
+    const container = document.createElement('mutation');
+    container.setAttribute('elseif', this.elseifCount_);
+    container.setAttribute('else', this.hasElse_ ? 1 : 0);
+    return container;
+  },
+  domToMutation: function (xmlElement) {
+    this.elseifCount_ = parseInt(xmlElement.getAttribute('elseif'), 10) || 0;
+    this.hasElse_ = xmlElement.getAttribute('else') === '1';
+    this.updateShape_();
+  },
+  updateShape_: function () {
+    const savedIfConns = {};
+    const savedDoConns = {};
+    let i = 1;
+    while (this.getInput('IF' + i)) {
+      savedIfConns[i] = this.getInput('IF' + i).connection.targetConnection;
+      savedDoConns[i] = this.getInput('DO' + i).connection.targetConnection;
+      this.removeInput('IF' + i);
+      this.removeInput('DO' + i);
+      i++;
+    }
+    let savedElseConn = null;
+    if (this.getInput('ELSE')) {
+      savedElseConn = this.getInput('ELSE').connection.targetConnection;
+      this.removeInput('ELSE');
+    }
+    for (i = 1; i <= this.elseifCount_; i++) {
+      this.appendValueInput('IF' + i).appendField('ELSIF').setCheck('Boolean');
+      this.appendStatementInput('DO' + i).appendField('THEN');
+    }
+    if (this.hasElse_) {
+      this.appendStatementInput('ELSE').appendField('ELSE');
+    }
+    for (i = 1; i <= this.elseifCount_; i++) {
+      if (savedIfConns[i]) {
+        try { this.getInput('IF' + i).connection.connect(savedIfConns[i]); } catch (e) {}
+      }
+      if (savedDoConns[i]) {
+        try { this.getInput('DO' + i).connection.connect(savedDoConns[i]); } catch (e) {}
+      }
+    }
+    if (this.hasElse_ && savedElseConn) {
+      try { this.getInput('ELSE').connection.connect(savedElseConn); } catch (e) {}
+    }
+  },
+  customContextMenu: function (options) {
+    const block = this;
+    options.push({
+      text: t('ctx_add_elseif'),
+      enabled: true,
+      callback: function () { block.elseifCount_++; block.updateShape_(); }
+    });
+    if (this.elseifCount_ > 0) {
+      options.push({
+        text: t('ctx_remove_elseif'),
+        enabled: true,
+        callback: function () {
+          const n = block.elseifCount_;
+          const ifInput = block.getInput('IF' + n);
+          const ifTarget = ifInput && ifInput.connection.targetBlock();
+          if (ifTarget) ifTarget.dispose(false, true);
+          const doInput = block.getInput('DO' + n);
+          const doTarget = doInput && doInput.connection.targetBlock();
+          if (doTarget) doTarget.dispose(false, true);
+          block.elseifCount_--;
+          block.updateShape_();
+        }
+      });
+    }
+    options.push({
+      text: this.hasElse_ ? t('ctx_remove_else') : t('ctx_add_else'),
+      enabled: true,
+      callback: function () {
+        if (block.hasElse_) {
+          const input = block.getInput('ELSE');
+          const target = input && input.connection.targetBlock();
+          if (target) target.dispose(false, true);
+        }
+        block.hasElse_ = !block.hasElse_;
+        block.updateShape_();
+      }
+    });
+  }
+};
+
+// --- st_case: dinamik kol sayısı (sağ-tık menüsüyle ekle/sil), mutator dialogu yok ---
+Blockly.Blocks['st_case'] = {
+  init: function () {
+    this.caseCount_ = 2;
+    this.hasElse_ = true;
+    this.appendValueInput('EXPR').appendField('CASE');
+    this.appendDummyInput().appendField('OF');
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setColour(25);
+    this.setTooltip(t('tooltip_case'));
+    this.updateShape_();
+  },
+  mutationToDom: function () {
+    const container = document.createElement('mutation');
+    container.setAttribute('cases', this.caseCount_);
+    container.setAttribute('else', this.hasElse_ ? 1 : 0);
+    return container;
+  },
+  domToMutation: function (xmlElement) {
+    this.caseCount_ = parseInt(xmlElement.getAttribute('cases'), 10) || 1;
+    this.hasElse_ = xmlElement.getAttribute('else') === '1';
+    this.updateShape_();
+  },
+  updateShape_: function () {
+    const savedLabels = {};
+    const savedConns = {};
+    let i = 1;
+    while (this.getInput('DO' + i)) {
+      const field = this.getField('LABEL' + i);
+      if (field) savedLabels[i] = field.getValue();
+      savedConns[i] = this.getInput('DO' + i).connection.targetConnection;
+      i++;
+    }
+    let savedElseConn = null;
+    if (this.getInput('ELSE')) {
+      savedElseConn = this.getInput('ELSE').connection.targetConnection;
+    }
+    i = 1;
+    while (this.getInput('DO' + i)) { this.removeInput('DO' + i); i++; }
+    if (this.getInput('ELSE')) this.removeInput('ELSE');
+
+    for (i = 1; i <= this.caseCount_; i++) {
+      this.appendStatementInput('DO' + i)
+        .appendField(new Blockly.FieldTextInput(
+          savedLabels[i] !== undefined ? savedLabels[i] : String(i - 1)), 'LABEL' + i)
+        .appendField(':');
+    }
+    if (this.hasElse_) {
+      this.appendStatementInput('ELSE').appendField('ELSE');
+    }
+    for (i = 1; i <= this.caseCount_; i++) {
+      if (savedConns[i]) {
+        try { this.getInput('DO' + i).connection.connect(savedConns[i]); } catch (e) {}
+      }
+    }
+    if (this.hasElse_ && savedElseConn) {
+      try { this.getInput('ELSE').connection.connect(savedElseConn); } catch (e) {}
+    }
+  },
+  customContextMenu: function (options) {
+    const block = this;
+    options.push({
+      text: t('ctx_add_case'),
+      enabled: true,
+      callback: function () { block.caseCount_++; block.updateShape_(); }
+    });
+    if (this.caseCount_ > 1) {
+      options.push({
+        text: t('ctx_remove_case'),
+        enabled: true,
+        callback: function () {
+          const input = block.getInput('DO' + block.caseCount_);
+          const target = input && input.connection.targetBlock();
+          if (target) target.dispose(false, true);
+          block.caseCount_--;
+          block.updateShape_();
+        }
+      });
+    }
+    options.push({
+      text: this.hasElse_ ? t('ctx_remove_else') : t('ctx_add_else'),
+      enabled: true,
+      callback: function () {
+        if (block.hasElse_) {
+          const input = block.getInput('ELSE');
+          const target = input && input.connection.targetBlock();
+          if (target) target.dispose(false, true);
+        }
+        block.hasElse_ = !block.hasElse_;
+        block.updateShape_();
+      }
+    });
+  }
+};
+
+// --- st_call/st_expr_call ortak yardımcılar ---
+// Parametre etiketi alanı: boşsa ":=" hiç gösterilmez (pozisyonel çağrı gibi
+// görünür, WORD_TO_TIME(x) örneğinde olduğu gibi) — kullanıcı bir isim
+// yazdığı anda (veya silince) otomatik olarak updateShape_ tetiklenip ":="
+// görünür/kaybolur. setTimeout: validator, alanın YENİ değeri commit
+// edilmeden hemen önce çalışır; bir sonraki tick'te okursak güncel değeri görürüz.
+// Sadece SONUNCU parametreyi değil, herhangi birini silebilmek için: mevcut
+// tüm parametreleri (label+bağlı değer) oku, idx'teki hariç geri kalanları
+// sıfırdan sırayla yeniden kur (boşluk kalmasın diye kaydırma yapılır).
+function removeArgAt(block, idx) {
+  const savedLabels = {};
+  const savedConns = {};
+  const savedDirs = {};
+  let i = 0;
+  while (block.getInput('ARG' + i)) {
+    const lf = block.getField('ARGLABEL' + i);
+    savedLabels[i] = lf ? lf.getValue() : '';
+    savedConns[i] = block.getInput('ARG' + i).connection.targetConnection;
+    savedDirs[i] = (block.argDirs_ && block.argDirs_[i]) || 'in';
+    i++;
+  }
+  const n = i;
+  if (savedConns[idx]) {
+    const targetBlock = savedConns[idx].getSourceBlock();
+    if (targetBlock) targetBlock.dispose(false, true);
+  }
+  const newLabels = {};
+  const newConns = {};
+  const newDirs = {};
+  let w = 0;
+  for (let k = 0; k < n; k++) {
+    if (k === idx) continue;
+    newLabels[w] = savedLabels[k];
+    newConns[w] = savedConns[k];
+    newDirs[w] = savedDirs[k];
+    w++;
+  }
+  block.argCount_ = n - 1;
+  block.updateShape_(newLabels, newConns, newDirs);
+}
+
+// ÖNEMLİ: buraya updateShape_'ı tetikleyen bir validator KOYMA — Blockly
+// FieldTextInput validator'ı her TUŞ VURUŞUNDA çalışır, updateShape_ ise
+// inputları söküp yeniden kurduğu için o an açık olan düzenleme kutusunu
+// kapatır; kullanıcı her harften sonra Enter'a basılmış gibi bir davranış
+// yaşar (gerçek bir hata olarak yaşandı, bilerek buraya not düşüldü).
+// Bu yüzden ":=" görünürlüğü sadece bloğun KURULDUĞU/yeniden şekillendiği
+// anda (parse, +/- parametre) belirleniyor — kullanıcı elle etiket
+// yazdığında canlı güncellenmiyor, kabul edilebilir bir basitleştirme.
+function makeArgLabelField(initial) {
+  return new Blockly.FieldTextInput(initial);
+}
+
+// --- st_call: fonksiyon/prosedür çağrısı, ör. _NewProd(); veya Foo(a, b); ---
+// GİRİŞ (:=) parametreleri ile ÇIKIŞ (=>) parametreleri artık AYRI görsel
+// bölümlerde gösteriliyor (gerçek bir FB çağrısının input/output ayrımını
+// yansıtsın diye — fbHomeXAxis gibi 20+ parametreli çağrılarda hepsi tek
+// sütunda karışmasın). Alan adları (ARGn/ARGLABELn) yine de ORİJİNAL
+// parse sırasına göre indeksleniyor — sadece hangi SATIRDA göründükleri
+// (IN bölümü mü OUT bölümü mü) değişiyor, üretici (stGen) hâlâ 0..N-1
+// sırayla okuyup orijinal kaynak sırasında kod üretiyor.
+Blockly.Blocks['st_call'] = {
+  init: function () {
+    this.argCount_ = 0;
+    this.argDirs_ = [];
+    this.setInputsInline(false);
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setColour(285);
+    this.setTooltip(t('tooltip_call'));
+    this.updateShape_();
+  },
+  mutationToDom: function () {
+    const container = document.createElement('mutation');
+    container.setAttribute('args', this.argCount_);
+    container.setAttribute('dirs', (this.argDirs_ || []).map(function (d) { return d === 'out' ? 'o' : 'i'; }).join(''));
+    return container;
+  },
+  domToMutation: function (xmlElement) {
+    this.argCount_ = parseInt(xmlElement.getAttribute('args'), 10) || 0;
+    const dirsAttr = xmlElement.getAttribute('dirs') || '';
+    this.argDirs_ = [];
+    for (let k = 0; k < this.argCount_; k++) this.argDirs_[k] = dirsAttr[k] === 'o' ? 'out' : 'in';
+    this.updateShape_();
+  },
+  updateShape_: function (overrideLabels, overrideConns, overrideDirs) {
+    // Parametre yoksa TEK SATIR: "Ad ( ) ;" — _HwLimits(); gibi çağrılar
+    // gereksiz yere iki satıra bölünmesin. Parametre varsa st_if'in
+    // ELSIF/ELSE satırları gibi her biri kendi satırında alt alta dizilir.
+    // Fonksiyon çağrısının parametre SAYISI zaten çağrılan fonksiyonun
+    // imzasına bağlı olduğu için (CASE kolu gibi keyfi değil) ekle/sil
+    // görünür buton değil, sağ-tık menüsünde — daha az "her an değişebilir"
+    // izlenimi versin diye. overrideLabels/overrideConns/overrideDirs:
+    // removeArgAt() belirli bir parametreyi (sonuncu olması şart değil)
+    // silip kalanları sıfırdan sırayla kurarken kullanır.
+    let savedConns, savedLabels, savedDirs;
+    let i = 0;
+    if (overrideLabels) {
+      savedLabels = overrideLabels;
+      savedConns = overrideConns;
+      savedDirs = overrideDirs || {};
+      while (this.getInput('ARG' + i)) { this.removeInput('ARG' + i); i++; }
+    } else {
+      savedConns = {};
+      savedLabels = {};
+      savedDirs = {};
+      while (this.getInput('ARG' + i)) {
+        savedConns[i] = this.getInput('ARG' + i).connection.targetConnection;
+        const lf = this.getField('ARGLABEL' + i);
+        if (lf) savedLabels[i] = lf.getValue();
+        savedDirs[i] = (this.argDirs_ && this.argDirs_[i]) || 'in';
+        this.removeInput('ARG' + i);
+        i++;
+      }
+      // Yukarıdaki while sadece ŞU AN VAR OLAN ARG girdilerini kapsıyor —
+      // domToMutation'ın ilk updateShape_ çağrısında (mutation'daki
+      // argCount_/argDirs_ YENİ set edilmiş ama girdiler henüz hiç
+      // oluşturulmamış) bu döngü hiç çalışmaz ve savedDirs boş kalırdı,
+      // her parametre sessizce IN'e düşerdi (=> hiç görünmezdi). Eksik
+      // kalan indeksleri doğrudan this.argDirs_'ten tamamlıyoruz.
+      for (let k = 0; k < this.argCount_; k++) {
+        if (savedDirs[k] === undefined) savedDirs[k] = (this.argDirs_ && this.argDirs_[k]) || 'in';
+      }
+    }
+    let funcName = '_NewProd';
+    const fnField = this.getField('FUNC_NAME');
+    if (fnField) funcName = fnField.getValue();
+    if (this.getInput('HEAD')) this.removeInput('HEAD');
+    if (this.getInput('OUTHEAD')) this.removeInput('OUTHEAD');
+    if (this.getInput('TAIL')) this.removeInput('TAIL');
+
+    const head = this.appendDummyInput('HEAD')
+      .appendField(new Blockly.FieldTextInput(funcName), 'FUNC_NAME')
+      .appendField('(');
+
+    if (this.argCount_ === 0) {
+      head.appendField(')').appendField(';');
+    } else {
+      const inIdxs = [];
+      const outIdxs = [];
+      for (i = 0; i < this.argCount_; i++) {
+        ((savedDirs[i] || 'in') === 'out' ? outIdxs : inIdxs).push(i);
+      }
+      const self = this;
+      const renderRow = function (idx) {
+        const inp = self.appendValueInput('ARG' + idx).setAlign(Blockly.inputs.Align.RIGHT);
+        const label = savedLabels[idx] || '';
+        inp.appendField(makeArgLabelField(label), 'ARGLABEL' + idx);
+        if (label) inp.appendField(savedDirs[idx] === 'out' ? '=>' : ':=');
+      };
+      inIdxs.forEach(renderRow);
+      if (outIdxs.length) this.appendDummyInput('OUTHEAD').appendField(t('out_section_label'));
+      outIdxs.forEach(renderRow);
+      this.appendDummyInput('TAIL').appendField(')').appendField(';');
+    }
+    for (i = 0; i < this.argCount_; i++) {
+      if (savedConns[i]) {
+        try { this.getInput('ARG' + i).connection.connect(savedConns[i]); } catch (e) {}
+      }
+    }
+    this.argDirs_ = [];
+    for (i = 0; i < this.argCount_; i++) this.argDirs_[i] = savedDirs[i] || 'in';
+  },
+  customContextMenu: function (options) {
+    const block = this;
+    options.push({
+      text: t('ctx_add_param'),
+      enabled: true,
+      callback: function () {
+        block.argDirs_ = block.argDirs_ || [];
+        block.argDirs_[block.argCount_] = 'in';
+        block.argCount_++;
+        block.updateShape_();
+      }
+    });
+    for (let idx = 0; idx < this.argCount_; idx++) {
+      const lf = this.getField('ARGLABEL' + idx);
+      const label = lf ? lf.getValue() : '';
+      const paramName = label || ('#' + (idx + 1));
+      options.push({
+        text: t('ctx_remove_param_named', { name: paramName }),
+        enabled: true,
+        callback: (function (fixedIdx) {
+          return function () { removeArgAt(block, fixedIdx); };
+        })(idx)
+      });
+    }
+  }
+};
+
+// --- st_expr_call: DEĞER döndüren fonksiyon çağrısı, ör. WORD_TO_TIME(x) veya
+// Vervo.FC_DriverName_v1_0(...) — st_call'ın aksine bir değer yuvasına takılabilir
+// (statement değil, output var). Gerçek kodda PT:=WORD_TO_TIME(...) gibi yerlerde gerekli oldu. ---
+Blockly.Blocks['st_expr_call'] = {
+  init: function () {
+    this.argCount_ = 1;
+    this.argDirs_ = ['in'];
+    this.setInputsInline(false);
+    this.setOutput(true, null);
+    this.setColour(255);
+    this.setTooltip(t('tooltip_exprcall'));
+    this.updateShape_();
+  },
+  mutationToDom: function () {
+    const container = document.createElement('mutation');
+    container.setAttribute('args', this.argCount_);
+    container.setAttribute('dirs', (this.argDirs_ || []).map(function (d) { return d === 'out' ? 'o' : 'i'; }).join(''));
+    return container;
+  },
+  domToMutation: function (xmlElement) {
+    this.argCount_ = parseInt(xmlElement.getAttribute('args'), 10) || 0;
+    const dirsAttr = xmlElement.getAttribute('dirs') || '';
+    this.argDirs_ = [];
+    for (let k = 0; k < this.argCount_; k++) this.argDirs_[k] = dirsAttr[k] === 'o' ? 'out' : 'in';
+    this.updateShape_();
+  },
+  updateShape_: function (overrideLabels, overrideConns, overrideDirs) {
+    // Parametre yoksa TEK SATIR: "Ad ( )" — parametre varsa st_if'in
+    // ELSIF/ELSE satırları gibi her biri kendi satırında alt alta dizilir.
+    // st_call'daki gibi GİRİŞ/ÇIKIŞ parametreleri ayrı bölümlerde gösterilir.
+    let savedConns, savedLabels, savedDirs;
+    let i = 0;
+    if (overrideLabels) {
+      savedLabels = overrideLabels;
+      savedConns = overrideConns;
+      savedDirs = overrideDirs || {};
+      while (this.getInput('ARG' + i)) { this.removeInput('ARG' + i); i++; }
+    } else {
+      savedConns = {};
+      savedLabels = {};
+      savedDirs = {};
+      while (this.getInput('ARG' + i)) {
+        savedConns[i] = this.getInput('ARG' + i).connection.targetConnection;
+        const lf = this.getField('ARGLABEL' + i);
+        if (lf) savedLabels[i] = lf.getValue();
+        savedDirs[i] = (this.argDirs_ && this.argDirs_[i]) || 'in';
+        this.removeInput('ARG' + i);
+        i++;
+      }
+      // bkz. st_call'daki aynı yorum: domToMutation'ın ilk updateShape_
+      // çağrısında girdiler henüz yokken savedDirs'i doğrudan argDirs_'ten
+      // tamamlıyoruz, yoksa her parametre sessizce IN'e düşerdi.
+      for (let k = 0; k < this.argCount_; k++) {
+        if (savedDirs[k] === undefined) savedDirs[k] = (this.argDirs_ && this.argDirs_[k]) || 'in';
+      }
+    }
+    let funcName = 'WORD_TO_TIME';
+    const fnField = this.getField('FUNC_NAME');
+    if (fnField) funcName = fnField.getValue();
+    if (this.getInput('HEAD')) this.removeInput('HEAD');
+    if (this.getInput('OUTHEAD')) this.removeInput('OUTHEAD');
+    if (this.getInput('TAIL')) this.removeInput('TAIL');
+
+    const head = this.appendDummyInput('HEAD')
+      .appendField(new Blockly.FieldTextInput(funcName), 'FUNC_NAME')
+      .appendField('(');
+
+    if (this.argCount_ === 0) {
+      head.appendField(')');
+    } else {
+      const inIdxs = [];
+      const outIdxs = [];
+      for (i = 0; i < this.argCount_; i++) {
+        ((savedDirs[i] || 'in') === 'out' ? outIdxs : inIdxs).push(i);
+      }
+      const self = this;
+      const renderRow = function (idx) {
+        const inp = self.appendValueInput('ARG' + idx).setAlign(Blockly.inputs.Align.RIGHT);
+        const label = savedLabels[idx] || '';
+        inp.appendField(makeArgLabelField(label), 'ARGLABEL' + idx);
+        if (label) inp.appendField(savedDirs[idx] === 'out' ? '=>' : ':=');
+      };
+      inIdxs.forEach(renderRow);
+      if (outIdxs.length) this.appendDummyInput('OUTHEAD').appendField(t('out_section_label'));
+      outIdxs.forEach(renderRow);
+      this.appendDummyInput('TAIL').appendField(')');
+    }
+    for (i = 0; i < this.argCount_; i++) {
+      if (savedConns[i]) {
+        try { this.getInput('ARG' + i).connection.connect(savedConns[i]); } catch (e) {}
+      }
+    }
+    this.argDirs_ = [];
+    for (i = 0; i < this.argCount_; i++) this.argDirs_[i] = savedDirs[i] || 'in';
+  },
+  customContextMenu: function (options) {
+    const block = this;
+    options.push({
+      text: t('ctx_add_param'),
+      enabled: true,
+      callback: function () {
+        block.argDirs_ = block.argDirs_ || [];
+        block.argDirs_[block.argCount_] = 'in';
+        block.argCount_++;
+        block.updateShape_();
+      }
+    });
+    for (let idx = 0; idx < this.argCount_; idx++) {
+      const lf = this.getField('ARGLABEL' + idx);
+      const label = lf ? lf.getValue() : '';
+      const paramName = label || ('#' + (idx + 1));
+      options.push({
+        text: t('ctx_remove_param_named', { name: paramName }),
+        enabled: true,
+        callback: (function (fixedIdx) {
+          return function () { removeArgAt(block, fixedIdx); };
+        })(idx)
+      });
+    }
+  }
+};
+
+// --- st_time_lit: T#2S gibi zaman sabiti ---
+Blockly.defineBlocksWithJsonArray([
+  {
+    "type": "st_time_lit",
+    "message0": "%1",
+    "args0": [{ "type": "field_input", "name": "TXT", "text": "T#2S" }],
+    "output": null,
+    "colour": 60,
+    "tooltip": t('tooltip_time_lit')
+  }
+]);
+
+// Sayısal sabitler (ör. "1000") parser'da yerleşik Blockly bloğu
+// "math_number"a dönüşüyor — bu blok bizim tanımlarımızdan değil,
+// Blockly çekirdeğinden (blocks_compressed.js) geliyor ve kendi
+// varsayılan (mavi) rengini taşıyor, bizim değer/sabit kategorimizle
+// (st_var/st_time_lit, sarı) tutarsız duruyordu. Burada init'ini
+// sarıp aynı sarı renge ve bir tooltip'e sabitliyoruz.
+if (Blockly.Blocks['math_number']) {
+  const origMathNumberInit = Blockly.Blocks['math_number'].init;
+  Blockly.Blocks['math_number'].init = function () {
+    origMathNumberInit.call(this);
+    this.setColour(60);
+    this.setTooltip(t('tooltip_number'));
+  };
+}
+
+// --- st_timer: TON/TOF instance çağrısı, ör. ton_VakumNOK(IN:=..., PT:=T#2S); ---
+Blockly.Blocks['st_timer'] = {
+  init: function () {
+    this.appendDummyInput('HEAD')
+      .appendField(new Blockly.FieldDropdown([['TON', 'TON'], ['TOF', 'TOF']]), 'FBTYPE')
+      .appendField(new Blockly.FieldTextInput('ton_Timer1'), 'INSTANCE')
+      .appendField('(');
+    this.appendValueInput('IN').appendField('IN :=').setAlign(Blockly.inputs.Align.RIGHT);
+    this.appendValueInput('PT').appendField('PT :=').setAlign(Blockly.inputs.Align.RIGHT);
+    this.appendDummyInput('TAIL').appendField(')').appendField(';');
+    this.setInputsInline(false);
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setColour(285);
+    this.setTooltip(t('tooltip_timer'));
+  }
+};
+
+// --- ST generator ---
+const stGen = new Blockly.Generator("ST");
+stGen.PRECEDENCE = 0;
+// Blockly'nin kendi Generator.blockToCode'u devre dışı blokları scrub_'a hiç
+// uğratmadan atlıyor (kodu tamamen kayboluyor) — biz devre dışı bloğun
+// kodunu YORUM SATIRINA çevirmek istediğimiz için bunu kendimiz yazıyoruz,
+// forBlock'u her zaman çağırıp scrub_'a devrediyoruz.
+stGen.blockToCode = function (block, opt_thisOnly) {
+  if (!block) return "";
+  const func = this.forBlock[block.type];
+  if (!func) throw Error('"ST" bu blok tipini üretemiyor: ' + block.type);
+  const code = func.call(block, block);
+  if (Array.isArray(code)) return code;
+  return this.scrub_(block, code, opt_thisOnly);
+};
+stGen.scrub_ = function (block, code, thisOnly) {
+  // Bloğun üstündeki Blockly'nin yerleşik "yorum" balonu (sağ tık: Add Comment)
+  // varsa, kaynak koddaki gibi bağımsız bir // satırı olarak bloğun ÖNÜNE ekle.
+  let result = code;
+  if (block.isEnabled && !block.isEnabled()) {
+    // Sağ tık "Disable Block" ile kapatılmış bloklar: ürettiği TÜM satırlar
+    // (iç içe gövdesi dahil) // ile yorum satırına çevrilir, silinmez —
+    // tekrar "Enable Block" denince normale döner.
+    result = code.split("\n").map(function (line) {
+      return line.trim() ? "//" + line : line;
+    }).join("\n");
+  } else {
+    const commentText = block.getCommentText ? block.getCommentText() : "";
+    if (commentText && !block.outputConnection) {
+      const commentLines = commentText.split("\n").map(function (l) { return "//" + l; }).join("\n");
+      result = commentLines + "\n" + code;
+    }
+  }
+  const next = block.nextConnection && block.nextConnection.targetBlock();
+  if (next && !thisOnly) return result + this.blockToCode(next);
+  return result;
+};
+
+// --- IEC 61131-3 öncelik sırası (gevşekten sıkıya):
+// OR/XOR < AND < karşılaştırma < toplama/çıkarma < çarpma/bölme/MOD < NOT/atomik. ---
+const ORDER_ANY = 0;
+const ORDER_OR = 1;
+const ORDER_AND = 2;
+const ORDER_COMPARE = 3;
+const ORDER_ADD = 4;
+const ORDER_MUL = 5;
+const ORDER_NOT = 7;
+const ORDER_ATOMIC = 8;
+
+function stValue(block, inputName, requiredOrder, fallback) {
+  const target = block.getInputTargetBlock(inputName);
+  if (!target) return fallback;
+  const fn = stGen.forBlock[target.type];
+  if (!fn) return fallback;
+  const pair = fn(target);
+  const code = pair[0], order = pair[1];
+  // Kaynak kodda kullanıcının açıkça yazdığı parantezler (data="forceParens"
+  // ile işaretli, bkz. parseAtom) precedence gereksiz kılsa bile korunur.
+  if (target.data === "forceParens") return "(" + code + ")";
+  return order < requiredOrder ? "(" + code + ")" : code;
+}
+
+stGen.forBlock = {
+  st_if: function (block) {
+    const cond0 = stValue(block, "IF0", ORDER_ANY, "TRUE");
+    const body0 = stGen.statementToCode(block, "DO0");
+    let out = `IF ${cond0} THEN\n${body0}`;
+    for (let i = 1; i <= block.elseifCount_; i++) {
+      const cond = stValue(block, "IF" + i, ORDER_ANY, "TRUE");
+      const body = stGen.statementToCode(block, "DO" + i);
+      out += `ELSIF ${cond} THEN\n${body}`;
+    }
+    if (block.hasElse_) {
+      const els = stGen.statementToCode(block, "ELSE");
+      out += `ELSE\n${els}`;
+    }
+    out += `END_IF;\n`;
+    return out;
+  },
+  st_compare: function (block) {
+    const a = stValue(block, "A", ORDER_COMPARE, "0");
+    const b = stValue(block, "B", ORDER_COMPARE, "0");
+    const op = block.getFieldValue("OP");
+    return [`${a} ${op} ${b}`, ORDER_COMPARE];
+  },
+  st_var: function (block) {
+    return [block.getFieldValue("NAME"), ORDER_ATOMIC];
+  },
+  st_logic: function (block) {
+    const op = block.getFieldValue("OP");
+    const opOrder = op === "AND" ? ORDER_AND : ORDER_OR;
+    const a = stValue(block, "A", opOrder, "FALSE");
+    const b = stValue(block, "B", opOrder, "FALSE");
+    return [`${a} ${op} ${b}`, opOrder];
+  },
+  st_not: function (block) {
+    const a = stValue(block, "A", ORDER_NOT, "FALSE");
+    return [`NOT ${a}`, ORDER_NOT];
+  },
+  st_math: function (block) {
+    const op = block.getFieldValue("OP");
+    const opOrder = (op === "*" || op === "/" || op === "MOD") ? ORDER_MUL : ORDER_ADD;
+    const a = stValue(block, "A", opOrder, "0");
+    // "-" ve "/" (ve MOD) DEĞİŞMELİ (commutative) DEĞİL — blok editörde
+    // kullanıcı sağ tarafa AYNI önceliğe sahip bir alt-ifade sürükleyip
+    // "10 - (5 - 2)" gibi bir şey kurabilir; parantezsiz basarsak
+    // "10 - 5 - 2" çıkar ki bu YANLIŞ bir değer verir (3 yerine 7 olmalı).
+    // Sağ tarafı bir üst önceliğe zorlayarak (eşit bile olsa) bu durumda
+    // parantez eklenmesini garantiliyoruz.
+    const nonCommutative = (op === "-" || op === "/" || op === "MOD");
+    const b = stValue(block, "B", nonCommutative ? opOrder + 1 : opOrder, "0");
+    return [`${a} ${op} ${b}`, opOrder];
+  },
+  st_case: function (block) {
+    const expr = stValue(block, "EXPR", ORDER_ANY, "0");
+    let out = `CASE ${expr} OF\n`;
+    for (let i = 1; i <= block.caseCount_; i++) {
+      const label = block.getFieldValue("LABEL" + i);
+      const body = stGen.statementToCode(block, "DO" + i);
+      out += `${label}:\n${body}`;
+    }
+    if (block.hasElse_) {
+      const els = stGen.statementToCode(block, "ELSE");
+      out += `ELSE\n${els}`;
+    }
+    out += `END_CASE;\n`;
+    return out;
+  },
+  st_time_lit: function (block) {
+    return [block.getFieldValue("TXT"), ORDER_ATOMIC];
+  },
+  st_timer: function (block) {
+    const inVal = stValue(block, "IN", ORDER_ANY, "FALSE");
+    const ptVal = stValue(block, "PT", ORDER_ANY, "T#0MS");
+    return `${block.getFieldValue("INSTANCE")}(IN:=${inVal}, PT:=${ptVal});\n`;
+  },
+  st_call: function (block) {
+    const args = [];
+    for (let i = 0; i < block.argCount_; i++) {
+      // fallback "" (0 değil): bağlanmamış bir ARG girişi gerçek kodda
+      // "label:= ," gibi değeri hiç yazılmamış bir parametreyi temsil
+      // ediyor olabilir — "0" basmak yanlış bir değer uydurmuş olurdu.
+      const val = stValue(block, "ARG" + i, ORDER_ANY, "");
+      const label = block.getFieldValue("ARGLABEL" + i);
+      const op = (block.argDirs_ && block.argDirs_[i] === "out") ? "=>" : ":=";
+      args.push(label ? `${label}${op}${val}` : val);
+    }
+    return `${block.getFieldValue("FUNC_NAME")}(${args.join(", ")});\n`;
+  },
+  st_assign: function (block) {
+    const val = stValue(block, "VALUE", ORDER_ANY, "0");
+    return `${block.getFieldValue("NAME")} := ${val};\n`;
+  },
+  st_comment: function (block) {
+    return `//${block.getFieldValue("TXT")}\n`;
+  },
+  st_expr_call: function (block) {
+    const args = [];
+    for (let i = 0; i < block.argCount_; i++) {
+      const val = stValue(block, "ARG" + i, ORDER_ANY, "");
+      const label = block.getFieldValue("ARGLABEL" + i);
+      const op = (block.argDirs_ && block.argDirs_[i] === "out") ? "=>" : ":=";
+      args.push(label ? `${label}${op}${val}` : val);
+    }
+    return [`${block.getFieldValue("FUNC_NAME")}(${args.join(", ")})`, ORDER_ATOMIC];
+  },
+  math_number: function (block) {
+    return [String(block.getFieldValue("NUM")), ORDER_ATOMIC];
+  },
+  st_for: function (block) {
+    const startVal = stValue(block, "START", ORDER_ANY, "0");
+    const endVal = stValue(block, "END", ORDER_ANY, "0");
+    const body = stGen.statementToCode(block, "DO");
+    return `FOR ${block.getFieldValue("VAR")} := ${startVal} TO ${endVal} DO\n${body}END_FOR;\n`;
+  },
+  st_continue: function (block) {
+    return `CONTINUE;\n`;
+  }
+};
+stGen.INDENT = "    ";
+
+// Blok içi metinler (alan etiketleri, dropdown, text input) Blockly'nin
+// varsayılan temasında biraz büyük — küçük bir tema ile fontStyle.size düşürülüyor.
+const compactTheme = Blockly.Theme.defineTheme("compact", {
+  base: Blockly.Themes.Classic,
+  fontStyle: { family: "sans-serif", weight: "normal", size: 9 }
+});
+
+// --- "Robot" ve "Motion" toolbox kategorileri: bu oturumda gerçek üretim
+// koduyla test edilmiş fonksiyon çağrılarını ÖNCEDEN DOLDURULMUŞ şablon
+// olarak sunuyor (ör. 20+ parametreli axis-homing çağrısını elle yazmak
+// yerine sürükleyip sadece değerleri değiştirmek yeterli). Şablon XML'i
+// ELLE YAZILMIYOR — kendi ST parser'ımızdan (parseStToBlockXml, aşağıda
+// tanımlı ama function-hoisting sayesinde burada erişilebilir) geçiriliyor
+// ki üretilen blok şekliyle birebir tutarlı olsun ve blok şekli ileride
+// değişirse burası da otomatik güncel kalsın — elle yazılan XML sessizce
+// bayatlayabilirdi.
+function buildTemplateCategoryXml(catId, nameKey, colour, srcLines) {
+  const blocksXml = srcLines.map(function (src) {
+    const result = parseStToBlockXml(src);
+    return result.blocks.join("");
+  }).join("");
+  return "<category id=\"" + catId + "\" name=\"" + xmlEscape(t(nameKey)) + "\" colour=\"" + colour + "\">" + blocksXml + "</category>";
+}
+(function installTemplateCategories() {
+  const robotCatXml = buildTemplateCategoryXml("catRobot", "cat_robot", 330, [
+    "fbHomeXAxis(i_xEnable:= TRUE, i_ifDrive:= DRV_RobotKoliAlma_X, i_xSensor:= Tp_RobotKoliAlma_X_Ref.Value, i_etMode:= PDL.ET_HomeMode.NegDirectionNegEdgeSensor, i_lrOffset:= 0, i_lrMaxTravel:= 1000, i_lrHomePosition:= 0, i_lrVel:= 50, i_lrAcc:= 500, i_lrDec:= 10000, i_lrJerk:= 10000, i_xHwLimitNeg:= , i_xHwLimitPos:= , i_xRotativeSystem:= , i_xStart:= FALSE, q_xActive=> , q_xReady=> , q_etDiag=> , q_etDiagExt=> , q_sMsg=> , q_xMotionInstructionActive=> , q_lrPosition=> , q_xHomeOk=> );",
+    "SR_RobotMotion_KoliAlma(iq_stStandardModuleInterface:=astSubModuleInterface[c_udiRobot], iq_stExceptionList:=iq_stExceptionList, iq_stLogDataList:=iq_stLogDataList, iq_stRoboticModuleItf:=stRobotInterface);"
+  ]);
+  const motionCatXml = buildTemplateCategoryXml("catMotion", "cat_motion", 190, [
+    "ton_waitTime(IN:=TRUE, PT:=T#100MS);",
+    "rtAutoStart(CLK:=SR_MainMachine.xActAuto, Q=> );"
+  ]);
+  const toolboxEl = document.getElementById("toolbox");
+  const frag = Blockly.utils.xml.textToDom("<xml>" + robotCatXml + motionCatXml + "</xml>");
+  Array.prototype.slice.call(frag.children).forEach(function (child) { toolboxEl.appendChild(child); });
+})();
+
+const workspace = Blockly.inject("blocklyDiv", {
+  toolbox: document.getElementById("toolbox"),
+  trashcan: true,
+  theme: compactTheme,
+  move: { scrollbars: true, drag: true, wheel: true }
+});
+
+// Bir bloğu tuttuğunda ekranın altına/kenarına doğru sürüklerken tuvalin
+// KENDİLİĞİNDEN kaymaması gerçek bir şikayetti — kullanıcı bırak/kaydır/
+// tekrar tut yapmak zorunda kalıyordu (Blockly çekirdeği sürükleme
+// SIRASINDA otomatik kaydırma yapmıyor, sadece boş tuvali elle sürükleyerek
+// kaydırmaya izin veriyor). Burada bloğu tutup imleci #blocklyDiv'in
+// kenarına yaklaştırdıkça workspace'i otomatik kaydıran basit bir
+// requestAnimationFrame döngüsü ekliyoruz.
+(function setupAutoScrollWhileDragging() {
+  const EDGE = 40;         // px — bu mesafeden yakınken kaydırma başlar
+  const MAX_SPEED = 16;    // px / adım — kenara tam yapışınca (ya da dışına taşınca) en hızlı
+  const INTERVAL_MS = 16;  // ~60/sn — requestAnimationFrame YERİNE setTimeout kullanılıyor,
+                            // çünkü bazı ortamlarda (headless/arka plandaki sekme gibi)
+                            // rAF hiç tetiklenmeyebiliyor; setTimeout her koşulda çalışır.
+  let lastClientX = null;
+  let lastClientY = null;
+  let timerId = null;
+
+  function edgeSpeed(pos, nearEdge, farEdge, sign) {
+    // nearEdge: EDGE-bandının tuval içindeki sınırı, farEdge: tuvalin dış
+    // sınırı (rect.top/rect.bottom vb.). İmleç EDGE bandının içindeyken
+    // KADEMELİ hızlanır; tuvalin TAMAMEN DIŞINA taştığında (kullanıcı fareyi
+    // kenardan öteye götürdüğünde — gerçek kullanımda çok olan bir durum)
+    // sabit MAX_SPEED ile devam eder, "dışarı çıkınca kaydırma durur" gibi
+    // ters bir davranışa düşmesin diye.
+    const dist = sign > 0 ? (pos - nearEdge) : (nearEdge - pos);
+    if (dist <= 0) return 0;
+    return sign * MAX_SPEED * Math.min(1, dist / EDGE);
+  }
+
+  function tick() {
+    timerId = null;
+    if (typeof workspace.isDragging !== "function" || !workspace.isDragging()) return;
+    if (lastClientX === null) { timerId = setTimeout(tick, INTERVAL_MS); return; }
+    const rect = document.getElementById("blocklyDiv").getBoundingClientRect();
+    let dx = 0, dy = 0;
+    if (lastClientY < rect.top + EDGE) dy = edgeSpeed(lastClientY, rect.top + EDGE, rect.top, -1);
+    else if (lastClientY > rect.bottom - EDGE) dy = edgeSpeed(lastClientY, rect.bottom - EDGE, rect.bottom, 1);
+    if (lastClientX < rect.left + EDGE) dx = edgeSpeed(lastClientX, rect.left + EDGE, rect.left, -1);
+    else if (lastClientX > rect.right - EDGE) dx = edgeSpeed(lastClientX, rect.right - EDGE, rect.right, 1);
+    if (dx || dy) {
+      // GERÇEK KÖK NEDEN (uzun bir hata avından sonra bulundu): tuvalin
+      // GERÇEK kayma durumu getMetrics().scrollLeft/scrollTop'ta DEĞİL,
+      // workspace.scrollX / workspace.scrollY CANLI özelliklerinde tutuluyor.
+      const newX = workspace.scrollX - dx;
+      const newY = workspace.scrollY - dy;
+      if (Number.isFinite(newX) && Number.isFinite(newY)) {
+        // NOT: Daha önce burada, tutulan bloğun kaydırma sırasında imleçle
+        // birlikte kalması için sentetik bir pointermove (ve ayrıca
+        // workspace.moveDrag()) ile Blockly'nin kendi sürükleme durumunu
+        // "zorla" güncellemeyi denedim. İkisi de gerçek kullanımda
+        // sürüklemenin YERİNDE DONMASINA yol açtı (workspace.moveDrag
+        // ekran-pikseli değil farklı bir koordinat sistemi bekliyor ve
+        // NaN/SVGPoint hatası fırlatıyordu; sentetik pointermove ise
+        // Blockly'nin gesture takibini bozuyor olabilir). Bu, "tuval hiç
+        // kaymıyor" durumundan DAHA KÖTÜ bir bug (sürükleme tamamen
+        // kilitleniyor). Bu yüzden BİLEREK sadece tuvali kaydırıyoruz —
+        // tutulan blok kaydırma sırasında görsel olarak birazcık geride
+        // kalabilir ama sürükleme asla kilitlenmiyor/bozulmuyor.
+        workspace.scroll(newX, newY);
+      }
+    }
+    timerId = setTimeout(tick, INTERVAL_MS);
+  }
+
+  function onPointerLike(e) {
+    lastClientX = e.clientX;
+    lastClientY = e.clientY;
+    if (timerId === null && typeof workspace.isDragging === "function" && workspace.isDragging()) {
+      timerId = setTimeout(tick, INTERVAL_MS);
+    }
+  }
+  // ÖNEMLİ: Blockly kendi sürükleme mantığında pointer olaylarını kullanıyor
+  // ve muhtemelen preventDefault() çağırıyor — bu da tarayıcının pointer
+  // olaylarından ürettiği "uyumluluk" mousemove olaylarını BASTIRIYOR.
+  // Sadece "mousemove" dinlemek gerçek kullanımda (sentetik event'lerle
+  // yapılan testte değil) HİÇ tetiklenmiyordu — bu yüzden hem pointermove
+  // hem mousemove dinleniyor, capture aşamasında (Blockly'nin kendi
+  // handler'larından önce/bağımsız çalışsın diye).
+  document.addEventListener("pointermove", onPointerLike, true);
+  document.addEventListener("mousemove", onPointerLike, true);
+})();
+
+document.getElementById("declOut").addEventListener("input", function () {
+  declManuallyEdited = true;
+});
+document.getElementById("declRegenBtn").addEventListener("click", function () {
+  declManuallyEdited = false;
+  renderDeclarations();
+});
+
+["input", "output", "local"].forEach(function (bucket) {
+  const id = "varList" + bucket.charAt(0).toUpperCase() + bucket.slice(1);
+  const el = document.getElementById(id);
+  // ÖNCEDEN sadece "blur" (odak kaybı) dinleniyordu — kullanıcı yazarken
+  // hiçbir şey olmuyormuş gibi hissediliyordu ("boş canvas'ta input
+  // oluşturamıyorum" geri bildirimi buradan geldi). parseVarListTextarea
+  // sadece extractedVars dizisini güncelliyor, textarea'nın kendi değerini
+  // YENİDEN YAZMIYOR — o yüzden "input" olayında çağırmak imleci/yazmayı
+  // bozmadan canlı güncelleme sağlıyor.
+  el.addEventListener("input", function () {
+    parseVarListTextarea(bucket, id);
+  });
+  attachTypeAutocomplete(el);
+  el.addEventListener("blur", function () {
+    parseVarListTextarea(bucket, id);
+  });
+});
+
+// --- Tip alanı için basit bir otomatik tamamlama: "ad : I" yazınca IEC
+// 61131-3 standart tiplerinden ("INT", "IEC..." vb.) eşleşenleri öneren
+// küçük bir açılır liste. Gerçek bir kod editörü değil düz <textarea>
+// olduğu için imlecin TAM piksel konumunu takip etmek yerine (kırılgan bir
+// "mirror div" hilesi gerektirirdi) satır numarasına göre YAKLAŞIK bir
+// dikey konum hesaplıyoruz — yeterince kullanışlı, çok daha az riskli. ---
+const IEC_TYPES = [
+  "BOOL", "BYTE", "WORD", "DWORD", "LWORD",
+  "SINT", "INT", "DINT", "LINT", "USINT", "UINT", "UDINT", "ULINT",
+  "REAL", "LREAL",
+  "TIME", "DATE", "TOD", "DT",
+  "STRING", "WSTRING", "CHAR", "WCHAR"
+];
+
+function attachTypeAutocomplete(textareaEl) {
+  const dropdown = document.createElement("div");
+  dropdown.className = "type-ac-dropdown";
+  dropdown.style.display = "none";
+  textareaEl.parentNode.style.position = textareaEl.parentNode.style.position || "relative";
+  textareaEl.parentNode.appendChild(dropdown);
+
+  let activeIndex = -1;
+  let currentMatches = [];
+  let fragStart = -1, fragEnd = -1;
+
+  function currentLineAndFragment() {
+    const val = textareaEl.value;
+    const pos = textareaEl.selectionStart;
+    const lineStart = val.lastIndexOf("\n", pos - 1) + 1;
+    const lineUpToCursor = val.slice(lineStart, pos);
+    const colonIdx = lineUpToCursor.lastIndexOf(":");
+    if (colonIdx === -1) return null;
+    const afterColon = lineUpToCursor.slice(colonIdx + 1);
+    const trimmed = afterColon.replace(/^\s+/, "");
+    // Tip parçası boşluk/noktalı virgül içeriyorsa kullanıcı zaten yazımı
+    // bitirmiş demektir — öneri göstermeye gerek yok (aşağıdaki return null).
+    if (/\s/.test(trimmed) || trimmed.indexOf(";") !== -1) return null;
+    return {
+      fragment: trimmed,
+      start: lineStart + colonIdx + 1 + (afterColon.length - trimmed.length),
+      end: pos
+    };
+  }
+
+  function closeDropdown() {
+    dropdown.style.display = "none";
+    activeIndex = -1;
+    currentMatches = [];
+  }
+
+  function renderDropdown() {
+    dropdown.innerHTML = "";
+    currentMatches.forEach(function (typeName, idx) {
+      const item = document.createElement("div");
+      item.className = "type-ac-item" + (idx === activeIndex ? " active" : "");
+      item.textContent = typeName;
+      item.addEventListener("mousedown", function (e) {
+        e.preventDefault();
+        commit(typeName);
+      });
+      dropdown.appendChild(item);
+    });
+  }
+
+  let suppressReopen = false;
+  function commit(typeName) {
+    const val = textareaEl.value;
+    const newVal = val.slice(0, fragStart) + typeName + val.slice(fragEnd);
+    textareaEl.value = newVal;
+    const newPos = fragStart + typeName.length;
+    textareaEl.setSelectionRange(newPos, newPos);
+    closeDropdown();
+    // Bu "input" olayı hem parseVarListTextarea'nın (yukarıda ayrı bir
+    // dinleyicide bağlı) extractedVars'ı güncellemesi İÇİN gerekli, hem de
+    // AYNI ZAMANDA bu fonksiyonun kendi 'input' dinleyicisini de tetikler —
+    // yazılan tip zaten kendi öneri listesinde birebir eşleştiği için
+    // (ör. "INT" yazınca "INT" öneriliyor) açılır liste hemen tekrar
+    // açılıyordu. suppressReopen ile SADECE bu bir sonraki tetiklenmeyi
+    // atlıyoruz, parseVarListTextarea'nın kendi dinleyicisi etkilenmiyor.
+    suppressReopen = true;
+    textareaEl.dispatchEvent(new Event("input", { bubbles: true }));
+    textareaEl.focus();
+  }
+
+  textareaEl.addEventListener("input", function () {
+    if (suppressReopen) { suppressReopen = false; return; }
+    const info = currentLineAndFragment();
+    if (!info || info.fragment.length === 0) { closeDropdown(); return; }
+    const upper = info.fragment.toUpperCase();
+    currentMatches = IEC_TYPES.filter(function (t) { return t.indexOf(upper) === 0; });
+    if (!currentMatches.length) { closeDropdown(); return; }
+    fragStart = info.start;
+    fragEnd = info.end;
+    activeIndex = 0;
+    // Yaklaşık dikey konum: imlecin bulunduğu satır numarası * satır
+    // yüksekliği (computed line-height'tan, boş bırakılmışsa 18px varsayılan).
+    const val = textareaEl.value;
+    const lineIndex = val.slice(0, textareaEl.selectionStart).split("\n").length - 1;
+    const cs = getComputedStyle(textareaEl);
+    let lineHeight = parseFloat(cs.lineHeight);
+    if (!lineHeight || Number.isNaN(lineHeight)) lineHeight = parseFloat(cs.fontSize) * 1.4 || 18;
+    const paddingTop = parseFloat(cs.paddingTop) || 0;
+    const top = paddingTop + (lineIndex + 1) * lineHeight - textareaEl.scrollTop;
+    dropdown.style.top = Math.max(0, Math.min(textareaEl.clientHeight, top)) + "px";
+    dropdown.style.left = "8px";
+    dropdown.style.display = "block";
+    renderDropdown();
+  });
+
+  textareaEl.addEventListener("keydown", function (e) {
+    if (dropdown.style.display === "none") return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      activeIndex = Math.min(currentMatches.length - 1, activeIndex + 1);
+      renderDropdown();
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      activeIndex = Math.max(0, activeIndex - 1);
+      renderDropdown();
+    } else if (e.key === "Enter" || e.key === "Tab") {
+      if (activeIndex >= 0 && currentMatches[activeIndex]) {
+        e.preventDefault();
+        commit(currentMatches[activeIndex]);
+      }
+    } else if (e.key === "Escape") {
+      closeDropdown();
+    }
+  });
+
+  textareaEl.addEventListener("blur", function () {
+    // Bir öneriye tıklama "mousedown"da zaten commit ediyor (blur'dan önce
+    // çalışır); burada sadece geriye kalan durumu temizliyoruz.
+    setTimeout(closeDropdown, 0);
+  });
+}
+
+// Akordeon: hepsi başlangıçta kapalı, biri açılınca diğerleri otomatik kapanır
+// (kullanıcı "çok küçük ekranlar olmuş, üstüne tıklayınca açılmalı, onun
+// dışında toplanmalı" dedi — normal <details multi-open> yerine bu davranış).
+const varDetailsIds = ["varDetailsInput", "varDetailsOutput", "varDetailsLocal"];
+
+// ÖNEMLİ: <textarea> flex konteynerde flex:1 ile büyümüyor (bilinen tarayıcı
+// garipliği — form elemanları flex-grow'a CSS ile düzgün uymuyor), o yüzden
+// açık olan textarea'nın yüksekliğini burada elle, piksel cinsinden
+// hesaplayıp veriyoruz — "aşağıya doğru uzun olmalı" isteği için gerekli.
+function resizeOpenVarTextarea() {
+  const panelRect = document.getElementById("varListPanel").getBoundingClientRect();
+  varDetailsIds.forEach(function (id) {
+    const details = document.getElementById(id);
+    const textarea = details.querySelector("textarea");
+    if (!details.open) { textarea.style.height = ""; return; }
+    const summaryHeight = details.querySelector("summary").getBoundingClientRect().height;
+    let othersHeight = 0;
+    varDetailsIds.forEach(function (otherId) {
+      if (otherId !== id) othersHeight += document.getElementById(otherId).getBoundingClientRect().height;
+    });
+    const available = panelRect.height - othersHeight - summaryHeight - 6;
+    textarea.style.height = Math.max(70, available) + "px";
+  });
+}
+
+varDetailsIds.forEach(function (id) {
+  document.getElementById(id).addEventListener("toggle", function (e) {
+    if (e.target.open) {
+      varDetailsIds.forEach(function (otherId) {
+        if (otherId !== id) document.getElementById(otherId).open = false;
+      });
+    }
+    setTimeout(resizeOpenVarTextarea, 0);
+  });
+});
+window.addEventListener("resize", resizeOpenVarTextarea);
+
+// Sol panelin genişliği de canvas/çıktı arasındaki ayırıcı gibi sürüklenerek ayarlanabilir.
+(function setupVarListResizer() {
+  const resizer = document.getElementById("varListResizer");
+  const panel = document.getElementById("varListPanel");
+  const mainEl = document.getElementById("main");
+  let dragging = false;
+  resizer.addEventListener("mousedown", function (e) {
+    dragging = true;
+    resizer.classList.add("dragging");
+    e.preventDefault();
+  });
+  document.addEventListener("mousemove", function (e) {
+    if (!dragging) return;
+    const mainLeft = mainEl.getBoundingClientRect().left;
+    const newWidth = e.clientX - mainLeft;
+    const clamped = Math.max(140, Math.min(newWidth, mainEl.clientWidth * 0.6));
+    panel.style.width = clamped + "px";
+    Blockly.svgResize(workspace);
+  });
+  document.addEventListener("mouseup", function () {
+    if (!dragging) return;
+    dragging = false;
+    resizer.classList.remove("dragging");
+    Blockly.svgResize(workspace);
+  });
+})();
+
+// Blockly'nin tema fontStyle'ı sadece flyout kategori etiketlerine CSS kuralı
+// üretiyor, blok İÇİ metne (.blocklyText) uygulanmıyor — bu yüzden kendi
+// kuralımızı Blockly'nin kendi <style> etiketlerinden SONRA (DOM sırası
+// kazanır) ekliyoruz ki kesin geçerli olsun.
+(function forceSmallBlockFont() {
+  const style = document.createElement("style");
+  style.textContent = ".blocklyText, .blocklyFlyoutLabelText, .blocklyEditableText > text, .blocklyNonEditableText > text { font-size: 9px !important; }";
+  document.head.appendChild(style);
+})();
+
+// --- Sürüklenebilir ayırıcı: canvas ile "Generated ST" paneli arasındaki
+// genişliği kullanıcı ayarlayabilsin diye. Blockly'nin kendi tuval boyutu
+// sürükleme sırasında da anlık güncellensin diye Blockly.svgResize çağrılıyor.
+(function setupResizer() {
+  const resizer = document.getElementById("resizer");
+  const outPanel = document.getElementById("out");
+  const mainEl = document.getElementById("main");
+  let dragging = false;
+  resizer.addEventListener("mousedown", function (e) {
+    dragging = true;
+    resizer.classList.add("dragging");
+    e.preventDefault();
+  });
+  document.addEventListener("mousemove", function (e) {
+    if (!dragging) return;
+    const mainRight = mainEl.getBoundingClientRect().right;
+    const newWidth = mainRight - e.clientX;
+    const clamped = Math.max(200, Math.min(newWidth, mainEl.clientWidth * 0.8));
+    outPanel.style.width = clamped + "px";
+    Blockly.svgResize(workspace);
+  });
+  document.addEventListener("mouseup", function () {
+    if (!dragging) return;
+    dragging = false;
+    resizer.classList.remove("dragging");
+    Blockly.svgResize(workspace);
+  });
+})();
+
+function render() {
+  const top = workspace.getTopBlocks(true);
+  let code = "";
+  top.forEach(function (b) {
+    const result = stGen.blockToCode(b);
+    if (Array.isArray(result)) {
+      // Değer döndüren (st_math, st_var, st_compare... "output" alanlı)
+      // bir blok hiçbir yere BAĞLANMADAN tek başına tuvalde duruyorsa
+      // stGen.blockToCode [kod, öncelik] TUPLE'ı döndürüyor (değer
+      // bloklarının iç kullanım sözleşmesi bu). Bunu olduğu gibi string'e
+      // eklemek dizinin toString()'i virgülle birleştirdiği için
+      // "i + j,4" gibi anlamsız bir çıktı üretiyordu — gerçek bir
+      // kullanıcı ekran görüntüsüyle bulundu (blok := ile bir yere
+      // bağlanmadan tek başına geçerli bir ST satırı olamaz zaten).
+      // Şimdi bunun yerine ne olduğunu açıklayan bir yorum satırı basıyoruz.
+      code += "// " + t("orphan_value_block_tpl", { code: result[0] }) + "\n";
+    } else {
+      code += result;
+    }
+  });
+  document.getElementById("stOut").textContent = code || t("output_placeholder");
+  renderDeclarations();
+}
+workspace.addChangeListener(render);
+render();
+
+// --- Değişken listesi çıkarma: VAR_INPUT/VAR_OUTPUT/VAR/VAR_IN_OUT/VAR CONSTANT ... END_VAR ---
+// Her giriş artık {name, type} — sadece isim değil, gerçek IEC tipini de (AXM.ST_ModuleInterface,
+// TON, ARRAY[...] OF X dahil) taşıyor, çünkü deklarasyon çıktısını yeniden üretebilmemiz gerekiyor.
+// (Değişkenin kendisi en tepede, applyStaticI18n/renderVarLists'in ilk senkron
+// çağrısından ÖNCE tanımlanıyor — TDZ hatası olmasın diye.)
+
+function extractDeclVars(text) {
+  const blockRe = /VAR(_INPUT|_OUTPUT|_IN_OUT)?(\s+CONSTANT)?\b[^\n]*\n([\s\S]*?)END_VAR/gi;
+  const lineRe = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*(?:AT\s+%\S+\s*)?:\s*([^;]+?)\s*;/;
+  const out = { input: [], output: [], local: [] };
+  const seen = new Set();
+  let m;
+  while ((m = blockRe.exec(text)) !== null) {
+    // VAR CONSTANT da "local" kovasına düşer (basitlik için) — asıl önemli olan tipin doğru yakalanması.
+    const kind = m[1] === "_INPUT" ? "input" : m[1] === "_OUTPUT" ? "output" : "local";
+    m[3].split("\n").forEach(function (line) {
+      const lm = lineRe.exec(line);
+      if (lm && !seen.has(lm[1])) {
+        seen.add(lm[1]);
+        out[kind].push({ name: lm[1], type: lm[2].trim() });
+      }
+    });
+  }
+  return out;
+}
+
+// TYPE Ad : STRUCT alan1:tip1; ... END_STRUCT; END_TYPE bloklarını ayrıştırır.
+// Şimdilik sadece TOPLANIP saklanıyor (structDefs) — derin tip çözümlemesi
+// (bir değişkenin STRUCT tipine göre .alan erişimlerinin gerçek tipini bulma)
+// henüz yok, bilinçli olarak sonraki adıma bırakıldı.
+let structDefs = {};
+function extractStructDefs(text) {
+  const structRe = /TYPE\s+([A-Za-z_][A-Za-z0-9_]*)\s*:\s*STRUCT\b([\s\S]*?)END_STRUCT\s*;?\s*END_TYPE/gi;
+  const lineRe = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*:\s*([^;]+?)\s*;/;
+  const defs = {};
+  let m;
+  while ((m = structRe.exec(text)) !== null) {
+    const fields = {};
+    m[2].split("\n").forEach(function (line) {
+      const lm = lineRe.exec(line);
+      if (lm) fields[lm[1]] = lm[2].trim();
+    });
+    defs[m[1]] = fields;
+  }
+  return defs;
+}
+
+// Gerçek projede doğrulanmış (Application.xml üzerinde istatistiksel) önek kuralları:
+// Di_/i_ -> giriş, Dq_/q_ -> çıkış, c_/l_/Gc_/st_/ton_/tof_/ctu_/ctd_/vpq_/iq_ -> yerel/instance.
+function classifyVarName(raw, writtenSet, readSet) {
+  const lower = raw.toLowerCase();
+  const inputPrefixes = ["di_", "i_"];
+  const outputPrefixes = ["dq_", "q_"];
+  const localPrefixes = ["c_", "l_", "gc_", "st_", "ton_", "tof_", "ctu_", "ctd_", "vpq_", "iq_"];
+  for (const p of inputPrefixes) if (lower.startsWith(p)) return "input";
+  for (const p of outputPrefixes) if (lower.startsWith(p)) return "output";
+  for (const p of localPrefixes) if (lower.startsWith(p)) return "local";
+  const w = writtenSet.has(raw), r = readSet.has(raw);
+  if (w && r) return "local";
+  if (w) return "output";
+  return "input";
+}
+
+const ST_KEYWORDS = new Set([
+  "IF", "THEN", "ELSE", "ELSIF", "END_IF", "CASE", "OF", "END_CASE",
+  "FOR", "TO", "BY", "DO", "END_FOR", "WHILE", "END_WHILE",
+  "REPEAT", "UNTIL", "END_REPEAT", "AND", "OR", "XOR", "NOT",
+  "TRUE", "FALSE", "VAR", "VAR_INPUT", "VAR_OUTPUT", "VAR_IN_OUT",
+  "END_VAR", "ARRAY", "STRUCT", "END_STRUCT", "TYPE", "END_TYPE",
+  "RETURN", "EXIT", "CONTINUE", "MOD"
+]);
+
+function extractVarsFromUsage(text) {
+  let t2 = text.replace(/\(\*[\s\S]*?\*\)/g, " ");
+  t2 = t2.replace(/\/\/[^\n]*/g, " ");
+  t2 = t2.replace(/'[^']*'/g, "''");
+  t2 = t2.replace(/\b[A-Za-z]*#[0-9A-Za-z_]+/g, " ");
+
+  const idRe = /[A-Za-z_][A-Za-z0-9_]*(?:\s*\.\s*[A-Za-z_][A-Za-z0-9_]*)*/g;
+  const seen = new Set();
+  const names = [];
+  const written = new Set();
+  const read = new Set();
+  let m;
+  while ((m = idRe.exec(t2)) !== null) {
+    const raw = m[0].replace(/\s*\.\s*/g, ".");
+    const root = raw.split(".")[0];
+    if (ST_KEYWORDS.has(root.toUpperCase())) continue;
+    const after = t2.slice(idRe.lastIndex);
+    if (/^\s*\(/.test(after)) continue;
+    if (/^\s*:=/.test(after)) {
+      const before = t2.slice(0, m.index);
+      const depth = (before.match(/\(/g) || []).length - (before.match(/\)/g) || []).length;
+      if (depth > 0) continue;
+      written.add(raw);
+    } else {
+      read.add(raw);
+    }
+    if (seen.has(raw)) continue;
+    seen.add(raw);
+    names.push(raw);
+  }
+  return { names: names, written: written, read: read };
+}
+
+function extractVarsFromText(text) {
+  const decl = extractDeclVars(text);
+  const declCount = decl.input.length + decl.output.length + decl.local.length;
+  if (declCount) return { vars: decl, mode: "decl" };
+
+  // Kullanımdan çıkarımda gerçek IEC tipini bilemeyiz — type: null olarak işaretleniyor,
+  // deklarasyon paneli bunu görünce kullanıcıdan tip istemesi gerektiğini anlıyor.
+  const usage = extractVarsFromUsage(text);
+  const vars = { input: [], output: [], local: [] };
+  usage.names.forEach(function (raw) {
+    vars[classifyVarName(raw, usage.written, usage.read)].push({ name: raw, type: null });
+  });
+  return { vars: vars, mode: "usage" };
+}
+
+// --- Girişler/Çıkışlar/Yerel: Blockly kategori/flyout (pill-şekilli sürükle-
+// bırak) DEĞİL — düz, DÜZENLENEBİLİR "ad : TİP;" metin listesi. Tıklama
+// otomatik blok eklemez, sadece görüntüler; kullanıcı burada tipi
+// değiştirebilir ya da yeni satır ekleyebilir. Elle yapılan değişiklikler
+// extractedVars[bucket]'a geri yazılır ki bilinen-tip sistemi (deklarasyon
+// paneli, "yeni değişken" uyarısı) bundan haberdar olsun.
+const VARLIST_LINE_RE = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*:\s*([^;]+?)\s*;?\s*$/;
+
+function varListText(list) {
+  if (!list.length) return "";
+  return list.map(function (entry) {
+    return entry.name + " : " + (entry.type || "???") + ";";
+  }).join("\n") + "\n";
+}
+
+function renderVarLists() {
+  document.getElementById("varListInput").value = varListText(extractedVars.input);
+  document.getElementById("varListOutput").value = varListText(extractedVars.output);
+  document.getElementById("varListLocal").value = varListText(extractedVars.local);
+}
+
+function parseVarListTextarea(bucket, textareaId) {
+  const lines = document.getElementById(textareaId).value.split("\n");
+  const out = [];
+  const seen = new Set();
+  lines.forEach(function (line) {
+    const m = VARLIST_LINE_RE.exec(line);
+    if (m && !seen.has(m[1])) {
+      seen.add(m[1]);
+      out.push({ name: m[1], type: m[2].trim() });
+    }
+  });
+  extractedVars[bucket] = out;
+}
+
+// --- Deklarasyon paneli: workspace'te GERÇEKTEN kullanılan tüm değişkenleri
+// tarar (st_var/st_assign'ın kök ismi + st_timer'ın instance adı — dizinin/alanın
+// kendisi değil, deklare edilmesi gereken KÖK isim), bilinen tipleri (yapıştırılan
+// deklarasyondan ya da Timer bloğunun TON/TOF seçiminden) eşler, hiç bilinmeyenleri
+// "// YENİ — tip kontrol edilmeli" olarak işaretler. Kullanıcı yeni bir değişken
+// eklediğinde sessizce kaybolmasın diye — bu panelin asıl amacı bu.
+function rootVarName(raw) {
+  const s = (raw || "").trim();
+  if (!s) return null;
+  if (s[0] === "'") return null;           // string literal
+  if (/^[0-9]/.test(s)) return null;        // sayısal literal
+  if (/^(TRUE|FALSE)$/i.test(s)) return null;
+  const m = /^[A-Za-z_][A-Za-z0-9_]*/.exec(s);
+  if (!m) return null;
+  if (ST_KEYWORDS.has(m[0].toUpperCase())) return null;
+  return m[0];
+}
+
+function lookupKnownVar(name) {
+  for (const kind of ["input", "output", "local"]) {
+    const found = extractedVars[kind].find(function (v) { return v.name === name; });
+    if (found) return { kind: kind, type: found.type };
+  }
+  return null;
+}
+
+// Gerçek önek kurallarına dayalı en iyi tahmin — kullanıcı deklarasyon
+// yapıştırmadıysa ve bloklarda hiç görülmemiş yeni bir isim yazdıysa devreye girer.
+function guessType(name) {
+  const lower = name.toLowerCase();
+  if (lower.startsWith("ton_")) return "TON";
+  if (lower.startsWith("tof_")) return "TOF";
+  if (lower.startsWith("ctu_")) return "CTU";
+  if (lower.startsWith("ctd_")) return "CTD";
+  if (lower.startsWith("r_trig_") || lower.startsWith("rt_")) return "R_TRIG";
+  if (lower.startsWith("f_trig_") || lower.startsWith("ft_")) return "F_TRIG";
+  if (lower.startsWith("i_x") || lower.startsWith("q_x") || lower.startsWith("di_") || lower.startsWith("dq_") || /^x[A-Z_]/.test(name)) return "BOOL";
+  if (lower.startsWith("i_n") || lower.startsWith("q_n") || lower.startsWith("l_n") || /^n[A-Z_]/.test(name)) return "INT";
+  if (lower.startsWith("i_lr") || lower.startsWith("lr")) return "LREAL";
+  if (lower.startsWith("i_s") || /^s[A-Z_]/.test(name)) return "STRING";
+  // Yaygın sayaç/indeks isimleri (i, j, k, n, m, idx, index, count...) —
+  // Hungarian-notation önekleriyle eşleşmese de gerçek kodda (özellikle
+  // FOR döngülerinde) çok sık görülüyor. "???" yerine INT gibi makul bir
+  // varsayılan vermek daha kullanışlı — "// YENİ" uyarısı zaten kullanıcıyı
+  // tipi kontrol etmeye yönlendiriyor, bu tahmin o uyarıyı KALDIRMIYOR.
+  if (/^(i|j|k|m|n|idx|index|cnt|count)[0-9]*$/i.test(name)) return "INT";
+  return "???";
+}
+
+// workspace'teki bloklardan gerçekten kullanılan kök değişken isimlerini toplar.
+// st_timer için TON/TOF zaten dropdown'dan KESİN biliniyor — tahmine gerek yok.
+function collectUsedVars() {
+  const found = new Map();
+  workspace.getAllBlocks(false).forEach(function (b) {
+    if (b.type === "st_var" || b.type === "st_assign") {
+      const root = rootVarName(b.getFieldValue("NAME"));
+      if (root && !found.has(root)) found.set(root, null);
+    } else if (b.type === "st_timer") {
+      const inst = b.getFieldValue("INSTANCE");
+      const fbtype = b.getFieldValue("FBTYPE");
+      if (inst) found.set(inst, fbtype);
+    }
+  });
+  return found;
+}
+
+function renderDeclSection(header, arr) {
+  if (!arr.length) return "";
+  let out = header + "\n";
+  arr.forEach(function (v) {
+    out += "    " + v.name + " : " + v.type + ";" + (v.isNew ? "  // YENİ" : "") + "\n";
+  });
+  out += "END_VAR\n";
+  return out;
+}
+
+function computeDeclarationsText() {
+  const used = collectUsedVars();
+  const buckets = { input: [], output: [], local: [] };
+  let newCount = 0;
+  const newVars = [];
+  used.forEach(function (knownType, name) {
+    const known = lookupKnownVar(name);
+    const kind = known ? known.kind : "local";
+    const isNew = !known;
+    const type = knownType || (known && known.type) || guessType(name);
+    buckets[kind].push({ name: name, type: type, isNew: isNew });
+    if (isNew) { newCount++; newVars.push({ name: name, type: type, kind: kind }); }
+  });
+  ["input", "output", "local"].forEach(function (k) {
+    buckets[k].sort(function (a, b) { return a.name.localeCompare(b.name); });
+  });
+  const text = renderDeclSection("VAR_INPUT", buckets.input)
+    + renderDeclSection("VAR_OUTPUT", buckets.output)
+    + renderDeclSection("VAR", buckets.local);
+  return { text: text, newCount: newCount, newVars: newVars };
+}
+
+// Sağdaki "Değişken Deklarasyonları" (tuvalde KULLANILAN her şeyi otomatik
+// tarar) ile soldaki GİRİŞLER/ÇIKIŞLAR/YEREL paneli (elle tutulan/yapıştırılan
+// referans listesi) BİLEREK iki ayrı sistem — kullanıcı gerçek kod
+// yapıştırıp "Değişkenleri Ayrıştır" yaptığında soldaki liste TAM olarak o
+// koddaki deklarasyonları yansıtsın, tuvaldeki geçici/deneme değişkenleri
+// (ör. "i", "j") onu KİRLETMESİN diye. Ama kullanıcı "toplu olmasını
+// tercih ederim" dedi — bu yüzden "// YENİ" olarak işaretlenen değişkenleri
+// tek tıkla sol listeye de EKLEYEN bir buton ekliyoruz (otomatik/sessiz
+// senkron değil, kullanıcı elle onaylıyor).
+function addNewVarsToDeclarations() {
+  latestNewVars.forEach(function (v) {
+    const bucket = extractedVars[v.kind];
+    if (!bucket.some(function (existing) { return existing.name === v.name; })) {
+      bucket.push({ name: v.name, type: v.type });
+    }
+  });
+  renderVarLists();
+  renderDeclarations();
+}
+
+function renderDeclarations() {
+  const result = computeDeclarationsText();
+  if (!declManuallyEdited) {
+    document.getElementById("declOut").value = result.text;
+  }
+  latestNewVars = result.newVars;
+  const warnEl = document.getElementById("declWarning");
+  if (result.newCount > 0) {
+    warnEl.style.display = "flex";
+    warnEl.textContent = "";
+    const span = document.createElement("span");
+    span.textContent = t("decl_new_var_tpl", { count: result.newCount });
+    warnEl.appendChild(span);
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "decl-add-left-btn";
+    btn.textContent = t("decl_add_to_left_btn");
+    btn.addEventListener("click", addNewVarsToDeclarations);
+    warnEl.appendChild(btn);
+  } else {
+    warnEl.style.display = "none";
+  }
+}
+
+document.getElementById("parseVarBtn").addEventListener("click", function () {
+  const text = document.getElementById("varInput").value;
+  const result = extractVarsFromText(text);
+  extractedVars = result.vars;
+  structDefs = extractStructDefs(text);
+  const modeLabel = result.mode === "decl" ? t("mode_decl") : t("mode_usage");
+  const total = extractedVars.input.length + extractedVars.output.length + extractedVars.local.length;
+  const structCount = Object.keys(structDefs).length;
+  let msg = total
+    ? t("vars_found_tpl", { count: total, mode: modeLabel, input: extractedVars.input.length, output: extractedVars.output.length, local: extractedVars.local.length })
+    : t("no_vars_found");
+  if (structCount) msg += " " + t("struct_found_tpl", { count: structCount });
+  document.getElementById("varResult").textContent = msg;
+  renderVarLists();
+});
+
+// =====================================================================
+// ST -> Blok ayrıştırıcı.
+// =====================================================================
+function xmlEscape(s) {
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+function findTrailingCommentIndex(line) {
+  let inStr = false;
+  for (let k = 0; k < line.length - 1; k++) {
+    if (line[k] === "'") inStr = !inStr;
+    if (!inStr && line[k] === "/" && line[k + 1] === "/") return k;
+  }
+  return -1;
+}
+function preprocessStSource(text) {
+  let t2 = text.replace(/\(\*[\s\S]*?\*\)/g, "\n");
+  const lines = t2.split("\n");
+  const outLines = [];
+  for (const raw of lines) {
+    const trimmed = raw.trim();
+    if (trimmed === "") continue;
+    if (/^\/\//.test(trimmed)) {
+      // Gerçek ST string literal kaçırma kuralı ('' = tek bir ') kullanılıyor,
+      // \' DEĞİL — parser'ın STR_RE'si de aynı kuralı bekliyor (bkz. aşağıda).
+      // Gerçek kaynakta yorumun içinde apostrof olabilir ("Run's" gibi) —
+      // bu daha önce parser'ı kırıyordu, gerçek bir örnekle bulunup düzeltildi.
+      const txt = trimmed.replace(/^\/\//, "").replace(/'/g, "''");
+      outLines.push("__CMT__('" + txt + "');");
+      continue;
+    }
+    const trailIdx = findTrailingCommentIndex(raw);
+    if (trailIdx === -1) {
+      outLines.push(raw);
+    } else {
+      const code = raw.slice(0, trailIdx);
+      const cmt = raw.slice(trailIdx + 2).trim().replace(new RegExp("[" + TRAIL_START + TRAIL_END + "]", "g"), "");
+      if (code.trim() === "") continue;
+      outLines.push(cmt ? code + TRAIL_START + cmt + TRAIL_END : code);
+    }
+  }
+  return outLines.join("\n");
+}
+
+function chainBlockXml(blockXmls) {
+  if (blockXmls.length === 0) return "";
+  let result = blockXmls[blockXmls.length - 1];
+  for (let k = blockXmls.length - 2; k >= 0; k--) {
+    const idx = blockXmls[k].lastIndexOf("</block>");
+    result = blockXmls[k].slice(0, idx) + "<next>" + result + "</next>" + blockXmls[k].slice(idx);
+  }
+  return result;
+}
+
+function StParseHatasi(msg, pos, src) {
+  this.message = msg;
+  this.pos = pos;
+  this.context = src.slice(Math.max(0, pos - 40), pos) + " ▶▶▶ " + src.slice(pos, pos + 40);
+}
+
+function parseStToBlockXml(rawText) {
+  const s = preprocessStSource(rawText);
+  let i = 0;
+  const n = s.length;
+
+  // Gerçek kodda bir IF koşulu birden fazla satıra yayılabiliyor ve satır
+  // sonu yorumu koşulun ORTASINDA kalabiliyor (örn. "... Hmi_xStop=FALSE
+  // //yorum\nAND ...THEN"). preprocessStSource bu satır-sonu yorumunu
+  // TRAIL_START/TRAIL_END işaretçileriyle sarıyor; bu işaretçi normalde
+  // attachTrailingComment tarafından İFADENİN TAM BİTİMİNDE yakalanıp
+  // gerçek bir yorum bloğuna dönüştürülüyor. Ama ifade henüz bitmemişken
+  // (yukarıdaki gibi ortada) ws() bu işaretçiyi tanımadığı için parser
+  // çöküyordu. Burada ws() işaretçiyi de (whitespace gibi) atlıyor —
+  // ifade ortasındaki yorum metni bu durumda kaybolur ama en azından
+  // parser çökmüyor. Gerçek satır-sonu yorumlar (ifade bittikten SONRA)
+  // attachTrailingComment'te YAKALANIYOR çünkü o, bu ws()'i değil kendi
+  // ham boşluk taramasını kullanıyor (bkz. attachTrailingComment).
+  function ws() {
+    while (i < n) {
+      if (/\s/.test(s[i])) { i++; continue; }
+      if (s[i] === TRAIL_START) {
+        const end = s.indexOf(TRAIL_END, i + 1);
+        if (end !== -1) { i = end + 1; continue; }
+      }
+      break;
+    }
+  }
+  function atEnd() { ws(); return i >= n; }
+  function kwAt(pos, kw) {
+    const re = new RegExp("^" + kw, "i");
+    if (!re.test(s.slice(pos))) return false;
+    const after = s[pos + kw.length];
+    return !after || !/[A-Za-z0-9_]/.test(after);
+  }
+  function peekKw(kw) { ws(); return kwAt(i, kw); }
+  function eatKw(kw) { ws(); i += kw.length; }
+  function eatCh(ch) { ws(); if (s[i] !== ch) throw new StParseHatasi("'" + ch + "' bekleniyordu", i, s); i++; }
+  function tryEatCh(ch) { ws(); if (s[i] === ch) { i++; return true; } return false; }
+
+  // ÖNCEDEN burada bir de sonda TEK bir "-10" gibi aritmetik son ek
+  // yutuluyordu (ör. "q_alrLePos[4]-10" opak metin olarak) — artık gerçek
+  // st_math blokları olduğu için bu son ek KALDIRILDI, "-"/"+" artık
+  // parseAddSub tarafından gerçek bir ikili işlem olarak ele alınıyor.
+  const IDENT_RE = /^[A-Za-z_][A-Za-z0-9_]*(?:\s*(?:\.\s*[A-Za-z_][A-Za-z0-9_]*|\[[^\]]*\]))*/;
+  const STR_RE = /^'(?:[^']|'')*'/;
+  const TYPEDLIT_RE = /^[A-Za-z]{1,6}#[0-9A-Za-z_]+/;
+  const NUM_RE = /^[0-9]+(?:\.[0-9]+)?/;
+  const CMP_OPS = ["<>", "<=", ">=", "=", "<", ">"];
+
+  function matchIdentRaw() {
+    ws();
+    const m = IDENT_RE.exec(s.slice(i));
+    if (!m) return null;
+    i += m[0].length;
+    return m[0].replace(/\s+/g, "");
+  }
+
+  function parseAtom() {
+    ws();
+    if (peekKw("NOT")) { eatKw("NOT"); const a = parseAtom(); return "<block type=\"st_not\"><value name=\"A\">" + a + "</value></block>"; }
+    if (s[i] === "(") {
+      i++;
+      const e = parseExpr();
+      eatCh(")");
+      // Kullanıcı açıkça parantez yazmışsa (precedence'a güvenmek yerine),
+      // bunu KORUYORUZ — gereksiz görünse de üretilen kodda kaldırmıyoruz.
+      // Gerçek kod incelemesinde bulundu: "(A AND B) OR (C AND D)" gibi
+      // XOR-benzeri desenlerde parantez, ileride araya bir terim daha
+      // eklenirse precedence'a güvenmekten kaynaklanacak sessiz bug'ı
+      // önlüyor — bakım açısından daha güvenli, o yüzden korunmalı.
+      return e.replace(/^<block type="([^"]+)">/, "<block type=\"$1\"><data>forceParens</data>");
+    }
+    let m;
+    if ((m = STR_RE.exec(s.slice(i)))) { i += m[0].length; return "<block type=\"st_var\"><field name=\"NAME\">" + xmlEscape(m[0]) + "</field></block>"; }
+    if ((m = TYPEDLIT_RE.exec(s.slice(i)))) { i += m[0].length; return "<block type=\"st_time_lit\"><field name=\"TXT\">" + xmlEscape(m[0]) + "</field></block>"; }
+
+    let atomText, isNumber;
+    if ((m = NUM_RE.exec(s.slice(i)))) {
+      i += m[0].length;
+      atomText = m[0];
+      isNumber = true;
+    } else {
+      const ident = matchIdentRaw();
+      if (ident === null) throw new StParseHatasi("Beklenmeyen karakter (ifade bekleniyordu)", i, s);
+      ws();
+      if (s[i] === "(") {
+        i++;
+        const args = parseArgList();
+        eatCh(")");
+        return xmlExprCallBlock(ident, args);
+      }
+      atomText = ident;
+      isNumber = false;
+    }
+    return "<block type=\"" + (isNumber ? "math_number" : "st_var") + "\"><field name=\"" + (isNumber ? "NUM" : "NAME") + "\">" + xmlEscape(atomText) + "</field></block>";
+  }
+
+  // --- Aritmetik: MOD/* /÷ (ORDER_MUL) sonra +/- (ORDER_ADD) — gerçek
+  // st_math bloklarına ayrıştırılıyor artık (önceden düz metin hilesiydi).
+  function parseMulDiv() {
+    let left = parseAtom();
+    while (true) {
+      ws();
+      let op = null;
+      if (kwAt(i, "MOD")) { op = "MOD"; }
+      else if (s[i] === "*") { op = "*"; }
+      else if (s[i] === "/") { op = "/"; }
+      if (!op) break;
+      i += op.length;
+      const right = parseAtom();
+      left = "<block type=\"st_math\"><field name=\"OP\">" + op + "</field><value name=\"A\">" + left + "</value><value name=\"B\">" + right + "</value></block>";
+    }
+    return left;
+  }
+
+  function parseAddSub() {
+    let left = parseMulDiv();
+    while (true) {
+      ws();
+      let op = null;
+      if (s[i] === "+") op = "+";
+      else if (s[i] === "-") op = "-";
+      if (!op) break;
+      i += 1;
+      const right = parseMulDiv();
+      left = "<block type=\"st_math\"><field name=\"OP\">" + op + "</field><value name=\"A\">" + left + "</value><value name=\"B\">" + right + "</value></block>";
+    }
+    return left;
+  }
+
+  // Her argüman {label, xml, dir} olarak dönüyor — dir "in" (:=) ya da
+  // "out" (=>). xml BOŞ (null) olabilir: "label:= ," ya da "label=> ,"
+  // gibi değeri hiç yazılmamış parametreler gerçek kodda çok görülüyor
+  // (bkz. fbHomeXAxis örneği) — bunları artık opak metin olarak değil,
+  // GERÇEKTEN etiketli ama bağlanmamış bir değer yuvası olarak temsil
+  // ediyoruz ki st_call/st_expr_call bunları IN/OUT olarak görsel
+  // gruplayabilsin (bkz. updateShape_ içindeki iki-geçişli render).
+  function parseArgList() {
+    const args = [];
+    ws();
+    if (s[i] === ")") return args;
+    while (true) {
+      // Gerçek kodda sondan bir önceki argümandan sonra fazladan bir virgül
+      // bırakılıp hiçbir şey yazılmadan direkt ")" ile kapatılan durumlar var
+      // (ör. "i_xStart:= FALSE, );") — muhtemelen PLC IDE'sinin otomatik
+      // biçimlendirmesinden kalma. Boş son argümanı sessizce atlıyoruz.
+      ws();
+      if (s[i] === ")") break;
+      let label = "";
+      let dir = "in";
+      let val = null;
+      let matched = false;
+      const save = i;
+      const maybeIdent = matchIdentRaw();
+      if (maybeIdent !== null) {
+        ws();
+        if (s[i] === ":" && s[i + 1] === "=") {
+          i += 2;
+          ws();
+          label = maybeIdent;
+          dir = "in";
+          matched = true;
+          if (s[i] !== "," && s[i] !== ")") val = parseExpr();
+        } else if (s[i] === "=" && s[i + 1] === ">") {
+          i += 2;
+          ws();
+          label = maybeIdent;
+          dir = "out";
+          matched = true;
+          if (s[i] !== "," && s[i] !== ")") val = parseExpr();
+        } else { i = save; }
+      } else { i = save; }
+      if (!matched) {
+        // ne ":=" ne "=>" — pozisyonel (etiketsiz) ifade, ör. Foo(a, b)
+        val = parseExpr();
+        dir = "in";
+      }
+      args.push({ label: label, xml: val, dir: dir });
+      ws();
+      if (s[i] === ",") { i++; continue; }
+      break;
+    }
+    return args;
+  }
+
+  function argDirsStr(args) {
+    return args.map(function (a) { return a.dir === "out" ? "o" : "i"; }).join("");
+  }
+  function argsFieldsXml(args) {
+    let out = "";
+    args.forEach(function (a, idx) {
+      out += "<field name=\"ARGLABEL" + idx + "\">" + xmlEscape(a.label) + "</field>";
+      if (a.xml !== null) out += "<value name=\"ARG" + idx + "\">" + a.xml + "</value>";
+    });
+    return out;
+  }
+
+  function xmlExprCallBlock(funcName, args) {
+    let out = "<block type=\"st_expr_call\"><mutation args=\"" + args.length + "\" dirs=\"" + argDirsStr(args) + "\"></mutation>";
+    out += "<field name=\"FUNC_NAME\">" + xmlEscape(funcName) + "</field>";
+    out += argsFieldsXml(args);
+    out += "</block>";
+    return out;
+  }
+
+  function parseCompare() {
+    const a = parseAddSub();
+    ws();
+    for (const op of CMP_OPS) {
+      if (s.slice(i, i + op.length) === op) {
+        i += op.length;
+        const b = parseAddSub();
+        return "<block type=\"st_compare\"><field name=\"OP\">" + xmlEscape(op) + "</field><value name=\"A\">" + a + "</value><value name=\"B\">" + b + "</value></block>";
+      }
+    }
+    return a;
+  }
+
+  function parseAnd() {
+    let left = parseCompare();
+    while (peekKw("AND")) {
+      eatKw("AND");
+      const right = parseCompare();
+      left = "<block type=\"st_logic\"><field name=\"OP\">AND</field><value name=\"A\">" + left + "</value><value name=\"B\">" + right + "</value></block>";
+    }
+    return left;
+  }
+
+  function parseExpr() {
+    let left = parseAnd();
+    while (peekKw("OR") || peekKw("XOR")) {
+      const op = peekKw("OR") ? "OR" : "XOR";
+      eatKw(op);
+      const right = parseAnd();
+      left = "<block type=\"st_logic\"><field name=\"OP\">" + op + "</field><value name=\"A\">" + left + "</value><value name=\"B\">" + right + "</value></block>";
+    }
+    return left;
+  }
+
+  function looksLikeCaseLabel() {
+    ws();
+    const m = /^([0-9]+(?:\s*,\s*[0-9]+)*|[A-Za-z_][A-Za-z0-9_]*)\s*:(?!=)/.exec(s.slice(i));
+    return !!m;
+  }
+
+  function attachTrailingComment(blockXml) {
+    // KASITLI OLARAK paylaşılan ws()'i DEĞİL, kendi ham boşluk taramasını
+    // kullanıyor — ws() artık TRAIL_START/END işaretçilerini de atlıyor
+    // (ifade-ortası yorumlar için, bkz. ws() üstündeki yorum), ama burada
+    // ifade TAM BİTMİŞ durumda ve marker'ı KAYBETMEDEN yakalamamız gerekiyor.
+    let j = i;
+    while (j < n && /\s/.test(s[j])) j++;
+    if (s[j] === TRAIL_START) {
+      const end = s.indexOf(TRAIL_END, j + 1);
+      if (end !== -1) {
+        const txt = s.slice(j + 1, end);
+        i = end + 1;
+        const tagEnd = blockXml.indexOf(">");
+        return blockXml.slice(0, tagEnd + 1) + "<comment pinned=\"false\" h=\"60\" w=\"200\">" + xmlEscape(txt) + "</comment>" + blockXml.slice(tagEnd + 1);
+      }
+    }
+    return blockXml;
+  }
+
+  function parseOneStatement() {
+    ws();
+    if (peekKw("IF")) return parseIf();
+    if (peekKw("CASE")) return parseCase();
+    if (peekKw("FOR")) return parseFor();
+    if (peekKw("CONTINUE")) { eatKw("CONTINUE"); tryEatCh(";"); return "<block type=\"st_continue\"></block>"; }
+    const ident = matchIdentRaw();
+    if (ident === null) throw new StParseHatasi("Beklenmeyen karakter (ifade/atama bekleniyordu)", i, s);
+    ws();
+    if (s[i] === "(") {
+      i++;
+      const args = parseArgList();
+      eatCh(")");
+      tryEatCh(";");
+      if (ident === "__CMT__" && args.length === 1) {
+        const raw = args[0].xml;
+        const fm = /<field name="NAME">'((?:[^']|'')*)'<\/field>/.exec(raw);
+        // txt burada zaten XML-escape edilmiş (STR_RE eşleşmesi xmlEscape'ten
+        // geçmişti) — tekrar xmlEscape uygulamak &amp; gibi dizileri
+        // &amp;amp;'e çevirip çift kaçışa yol açıyordu (gerçek koddaki
+        // "//Start&Stop..." yorumunda bulundu). Burada TEKRAR escape ETME.
+        const txt = fm ? fm[1].replace(/''/g, "'") : "";
+        return "<block type=\"st_comment\"><field name=\"TXT\">" + txt + "</field></block>";
+      }
+      let out = "<block type=\"st_call\"><mutation args=\"" + args.length + "\" dirs=\"" + argDirsStr(args) + "\"></mutation>";
+      out += "<field name=\"FUNC_NAME\">" + xmlEscape(ident) + "</field>";
+      out += argsFieldsXml(args);
+      out += "</block>";
+      return attachTrailingComment(out);
+    }
+    if (s[i] === ":" && s[i + 1] === "=") {
+      i += 2;
+      const val = parseExpr();
+      tryEatCh(";");
+      const assignOut = "<block type=\"st_assign\"><field name=\"NAME\">" + xmlEscape(ident) + "</field><value name=\"VALUE\">" + val + "</value></block>";
+      return attachTrailingComment(assignOut);
+    }
+    throw new StParseHatasi("'" + ident + "' sonrası '(' ya da ':=' bekleniyordu", i, s);
+  }
+
+  function parseStatements(stopFn) {
+    const blocks = [];
+    while (true) {
+      ws();
+      if (i >= n) break;
+      if (stopFn()) break;
+      blocks.push(parseOneStatement());
+    }
+    return chainBlockXml(blocks);
+  }
+
+  function parseIf() {
+    eatKw("IF");
+    const cond0 = parseExpr();
+    eatKw("THEN");
+    const do0 = parseStatements(function () { return peekKw("ELSIF") || peekKw("ELSE") || peekKw("END_IF"); });
+    const elseifs = [];
+    while (peekKw("ELSIF")) {
+      eatKw("ELSIF");
+      const c = parseExpr();
+      eatKw("THEN");
+      const b = parseStatements(function () { return peekKw("ELSIF") || peekKw("ELSE") || peekKw("END_IF"); });
+      elseifs.push({ cond: c, body: b });
+    }
+    let elseBody = null;
+    if (peekKw("ELSE")) { eatKw("ELSE"); elseBody = parseStatements(function () { return peekKw("END_IF"); }); }
+    eatKw("END_IF");
+    tryEatCh(";");
+    let out = "<block type=\"st_if\"><mutation elseif=\"" + elseifs.length + "\" else=\"" + (elseBody !== null ? 1 : 0) + "\"></mutation>";
+    out += "<value name=\"IF0\">" + cond0 + "</value>";
+    if (do0) out += "<statement name=\"DO0\">" + do0 + "</statement>";
+    elseifs.forEach(function (e, idx) {
+      const k = idx + 1;
+      out += "<value name=\"IF" + k + "\">" + e.cond + "</value>";
+      if (e.body) out += "<statement name=\"DO" + k + "\">" + e.body + "</statement>";
+    });
+    if (elseBody !== null && elseBody) out += "<statement name=\"ELSE\">" + elseBody + "</statement>";
+    out += "</block>";
+    return out;
+  }
+
+  function parseCase() {
+    eatKw("CASE");
+    const expr = parseExpr();
+    eatKw("OF");
+    const arms = [];
+    while (!peekKw("ELSE") && !peekKw("END_CASE")) {
+      ws();
+      const lm = /^([0-9]+(?:\s*,\s*[0-9]+)*|[A-Za-z_][A-Za-z0-9_]*)\s*:/.exec(s.slice(i));
+      if (!lm) throw new StParseHatasi("CASE kolu etiketi bekleniyordu", i, s);
+      i += lm[0].length;
+      const body = parseStatements(function () { return peekKw("ELSE") || peekKw("END_CASE") || looksLikeCaseLabel(); });
+      arms.push({ label: lm[1].replace(/\s+/g, ""), body: body });
+    }
+    let elseBody = null;
+    if (peekKw("ELSE")) { eatKw("ELSE"); elseBody = parseStatements(function () { return peekKw("END_CASE"); }); }
+    eatKw("END_CASE");
+    tryEatCh(";");
+    let out = "<block type=\"st_case\"><mutation cases=\"" + arms.length + "\" else=\"" + (elseBody !== null ? 1 : 0) + "\"></mutation>";
+    out += "<value name=\"EXPR\">" + expr + "</value>";
+    arms.forEach(function (a, idx) {
+      const k = idx + 1;
+      out += "<field name=\"LABEL" + k + "\">" + xmlEscape(a.label) + "</field>";
+      if (a.body) out += "<statement name=\"DO" + k + "\">" + a.body + "</statement>";
+    });
+    if (elseBody !== null && elseBody) out += "<statement name=\"ELSE\">" + elseBody + "</statement>";
+    out += "</block>";
+    return out;
+  }
+
+  function parseFor() {
+    eatKw("FOR");
+    ws();
+    const varName = matchIdentRaw();
+    if (varName === null) throw new StParseHatasi("FOR değişkeni bekleniyordu", i, s);
+    ws();
+    if (s[i] !== ":" || s[i + 1] !== "=") throw new StParseHatasi("':=' bekleniyordu", i, s);
+    i += 2;
+    const startExpr = parseExpr();
+    eatKw("TO");
+    const endExpr = parseExpr();
+    eatKw("DO");
+    const body = parseStatements(function () { return peekKw("END_FOR"); });
+    eatKw("END_FOR");
+    tryEatCh(";");
+    let out = "<block type=\"st_for\">";
+    out += "<field name=\"VAR\">" + xmlEscape(varName) + "</field>";
+    out += "<value name=\"START\">" + startExpr + "</value>";
+    out += "<value name=\"END\">" + endExpr + "</value>";
+    if (body) out += "<statement name=\"DO\">" + body + "</statement>";
+    out += "</block>";
+    return out;
+  }
+
+  const topBlocks = [];
+  try {
+    while (!atEnd()) {
+      topBlocks.push(parseOneStatement());
+    }
+    return { ok: true, blocks: topBlocks, error: null };
+  } catch (e) {
+    if (e instanceof StParseHatasi) {
+      return { ok: false, blocks: topBlocks, error: e.message, context: e.context };
+    }
+    return { ok: false, blocks: topBlocks, error: "Beklenmeyen hata: " + e.message, context: "" };
+  }
+}
+
+document.getElementById("parseCodeBtn").addEventListener("click", function () {
+  const text = document.getElementById("varInput").value;
+  const result = parseStToBlockXml(text);
+  const resultEl = document.getElementById("parseCodeResult");
+  if (result.blocks.length === 0) {
+    resultEl.textContent = result.ok ? t("parse_code_empty") : t("parse_code_fail_tpl", { error: result.error, context: result.context });
+    return;
+  }
+  const xmlStr = "<xml xmlns=\"https://developers.google.com/blockly/xml\">" + chainBlockXml(result.blocks) + "</xml>";
+  try {
+    const dom = Blockly.utils.xml.textToDom(xmlStr);
+    workspace.clear();
+    Blockly.Xml.domToWorkspace(dom, workspace);
+    workspace.cleanUp();
+    // workspace.addChangeListener(render) Blockly'nin kendi olay kuyruğuna
+    // bağlı olduğu için domToWorkspace sonrası HEMEN tetiklenmeyebiliyor —
+    // gerçek kullanımda "Kodu Bloklara Çevir"e basınca sağdaki çıktı eski
+    // (boş) haliyle kalıyordu, kullanıcı elle bir bloğa dokunana kadar.
+    // Burada açıkça çağırarak anında güncel çıktı garantiliyoruz.
+    render();
+  } catch (e) {
+    resultEl.textContent = t("parse_code_xml_fail_tpl", { error: e.message });
+    return;
+  }
+  resultEl.textContent = result.ok
+    ? t("parse_code_ok_tpl", { count: result.blocks.length })
+    : t("parse_code_partial_tpl", { count: result.blocks.length, error: result.error, context: result.context });
+});
+
+})();
+</script>
+</body>
+</html>

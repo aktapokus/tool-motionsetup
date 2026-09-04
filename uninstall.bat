@@ -1,0 +1,51 @@
+@echo off
+setlocal enabledelayedexpansion
+
+echo ============================================
+echo   MOTION SETUP - TOOL KALDIRMA
+echo ============================================
+echo.
+
+set DEFAULT_CORE=..\aktapokus-core
+set /p CORE_PATH=Core klasoru nerede? [%DEFAULT_CORE%]:
+if "%CORE_PATH%"=="" set CORE_PATH=%DEFAULT_CORE%
+
+if not exist "%CORE_PATH%\tools\motionsetup" goto NOTINSTALLED
+
+echo Bu islem sunu SILECEK: %CORE_PATH%\tools\motionsetup\
+echo.
+choice /c ED /m "Devam edilsin mi? (E=Evet, D=Dur)"
+if errorlevel 2 goto CANCELLED
+
+echo [1/2] Dosyalar siliniyor: %CORE_PATH%\tools\motionsetup\
+rmdir /s /q "%CORE_PATH%\tools\motionsetup"
+if exist "%CORE_PATH%\tools\motionsetup" goto DELFAIL
+
+echo [2/2] Container yeniden baslatiliyor...
+pushd "%CORE_PATH%\core"
+docker compose restart app
+popd
+
+echo.
+echo ============================================
+echo   MOTION SETUP KALDIRILDI
+echo ============================================
+echo   Arayuzu yenileyin: http://localhost:8000
+echo ============================================
+pause
+exit /b 0
+
+:NOTINSTALLED
+echo Motion Setup zaten kurulu degil: %CORE_PATH%\tools\motionsetup bulunamadi.
+pause
+exit /b 0
+
+:CANCELLED
+echo Iptal edildi, hicbir sey silinmedi.
+pause
+exit /b 0
+
+:DELFAIL
+echo [HATA] Dosyalar silinemedi - klasor kullanimda olabilir.
+pause
+exit /b 1
