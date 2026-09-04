@@ -53,7 +53,7 @@ const T_FALLBACK = {
   ice_aktariliyor: 'İçe aktarılıyor…', ice_aktarma_hatasi: 'İçe aktarma başarısız',
   kapsam_etiket: 'Kapsam', kapsam_ana_makine: 'Ana Makine (modülleri çağırır)',
   hedefler_etiket: 'Hedefler', komutlar_etiket_proje: 'Komutlar (modül — ET_Cmd)',
-  komutlar_etiket_axm: 'Komutlar (eksen — AXM.ET_Cmd)', yayin_blok_etiket: 'Tümü (yayın)',
+  komutlar_etiket_axm: 'Komutlar (eksen — MC.ET_Cmd)', yayin_blok_etiket: 'Tümü (yayın)',
   adreslenemeyen_not: 'Bu modülün eksenleri ayrı hedeflenemiyor — sadece modül seviyesinde',
   ice_aktarilmadi_placeholder: 'Bloklar için önce bir proje XML\'i içe aktarın',
   standart_tablolar_btn: 'Standart Tabloları Oluştur',
@@ -165,7 +165,7 @@ export function mount(container, api, toolId) {
 
   function aktifTablo() { return tablolar[aktifTabloAdi]; }
 
-  // "GroupTransfer" gibi bir kapsam adının, "SR02_GroupTransferModule" gibi
+  // "GroupTransfer" gibi bir kapsam adının, "ExampleModule" gibi
   // bir POU adı içinde SIRAYLA (aralarına başka karakter girebilir, ör.
   // "Robot"+"Module_"+"Gripper" -> "RobotGripper") geçip geçmediğini
   // kontrol eder. Ana makine için POU adında "mainmachine" aranır.
@@ -362,7 +362,7 @@ export function mount(container, api, toolId) {
   // doldurur — gerçek projede standart tablolardaki HER adımın komutu zaten
   // tablonun kendi komutuyla aynı, kullanıcının bunu tekrar tekrar
   // seçmesine gerek yok. Özel bir durum (ör. eksen homing'i farklı bir
-  // AXM.ET_Cmd.* istiyorsa) bir komut bloğuna tıklayarak override edilebilir.
+  // MC.ET_Cmd.* istiyorsa) bir komut bloğuna tıklayarak override edilebilir.
   // Sürükle-bırak alternatif olarak kalıyor ama artık tek yol değil.
   function blokUygula(alan, deger, etiket) {
     const tbl = aktifTablo();
@@ -399,14 +399,14 @@ export function mount(container, api, toolId) {
 
     let hedefBlokHtml;
     if (kapsam === 'main') {
-      hedefBlokHtml = blokHtml('TPL.Gc_udiAllSubModules', t('yayin_blok_etiket'))
+      hedefBlokHtml = blokHtml('SEQ.Gc_udiAllSubModules', t('yayin_blok_etiket'))
         + modules.map(m => blokHtml(m.udi_const, m.name, m.udi_value)).join('');
     } else {
       const mod = modules.find(m => m.name === kapsam);
       const eksenler = mod ? mod.axes || [] : [];
       const adreslenebilir = eksenler.filter(a => a.addressable);
       const adreslenemeyen = eksenler.filter(a => !a.addressable);
-      hedefBlokHtml = blokHtml('TPL.Gc_udiAllSubModules', t('yayin_blok_etiket'))
+      hedefBlokHtml = blokHtml('SEQ.Gc_udiAllSubModules', t('yayin_blok_etiket'))
         + adreslenebilir.map(a => blokHtml(a.udi_const, a.name, undefined, 'ms-blok-eksen')).join('')
         + (adreslenemeyen.length
             ? `<div class="ms-hint">${esc(t('adreslenemeyen_not'))}: ${adreslenemeyen.map(a => esc(a.name)).join(', ')}</div>`
@@ -416,7 +416,7 @@ export function mount(container, api, toolId) {
     const projeKomutlar = (topology.project_et_cmd || [])
       .map(c => `<div class="ms-cmd-blok" draggable="true" data-drag-value="ET_Cmd.${esc(c.name)}" data-blok-alan="cmd" title="${esc(t('blok_tikla_ipucu'))}">${esc(c.name)}</div>`).join('');
     const axmKomutlar = (topology.axm_et_cmd_used || [])
-      .map(name => `<div class="ms-cmd-blok" draggable="true" data-drag-value="AXM.ET_Cmd.${esc(name)}" data-blok-alan="cmd" title="${esc(t('blok_tikla_ipucu'))}">${esc(name)}</div>`).join('');
+      .map(name => `<div class="ms-cmd-blok" draggable="true" data-drag-value="MC.ET_Cmd.${esc(name)}" data-blok-alan="cmd" title="${esc(t('blok_tikla_ipucu'))}">${esc(name)}</div>`).join('');
 
     paletteBody.innerHTML = `
       <label class="field-label">${esc(t('kapsam_etiket'))}</label>

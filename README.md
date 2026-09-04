@@ -29,7 +29,7 @@ ST parser'ına bağımlı değil.
   (sürükle-bırak ile yeniden sıralanabilir).
 - Her adım: başlık, hedef modül (`udi`), komut (`diCMD`), timeout,
   son-adım işareti.
-- `TPL.FC_FirstStep/NextStep/LastStep` + `astListofCMDTables[...]`
+- `SEQ.FC_FirstStep/NextStep/LastStep` + `astListofCMDTables[...]`
   özet bloğunu, gerçek proje kodundaki referans yapıyla birebir
   eşleşen ST kodu olarak üretir.
 

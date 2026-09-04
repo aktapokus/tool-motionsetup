@@ -4,16 +4,16 @@ CMD Table codegen prototype — Aktapokus Motion Setup Tool.
 STATE_NODE primitifinin CMD_TABLE bağlamındaki uygulaması: bir CMD table
 sıralı bir "step" listesidir, her step {title, target_udi, cmd, timeout,
 is_end} taşır. Bu modül bir step listesini, referans Init_CmdTables
-POU'suyla (SR02_GroupTransferModule) birebir yapısal olarak eşleşen ST
+POU'suyla (ExampleModule) birebir yapısal olarak eşleşen ST
 kodu haline getirir.
 
 Referans desen (kullanıcının paylaştığı gerçek proje kodundan):
-  - İlk step  -> TPL.FC_FirstStep(udiStepIndex, diStep);
-  - Ara step'ler -> TPL.FC_NextStep(udiStepIndex, diStep);
-  - Son step  -> TPL.FC_LastStep(udiStepIndex, diStep);
+  - İlk step  -> SEQ.FC_FirstStep(udiStepIndex, diStep);
+  - Ara step'ler -> SEQ.FC_NextStep(udiStepIndex, diStep);
+  - Son step  -> SEQ.FC_LastStep(udiStepIndex, diStep);
   - Her step için 6 alan ata: sTitle, udiModuleName, diStep, diCMD,
     timTimeOut, xEndCMD (bu sırayla, hizalı := ile)
-  - Tablo bitince: TPL.FC_FirstCmdTable + astListofCMDTables[...] 3 satır
+  - Tablo bitince: SEQ.FC_FirstCmdTable + astListofCMDTables[...] 3 satır
 """
 
 from __future__ import annotations
@@ -23,8 +23,8 @@ from dataclasses import dataclass, field
 @dataclass
 class CmdStep:
     title: str
-    target_udi: str        # ör. "c_udiGroupTransferZ" ya da "TPL.Gc_udiAllSubModules"
-    cmd: str                # ör. "AXM.ET_Cmd.Start" — "diCMD" alanına aynen yazılır
+    target_udi: str        # ör. "c_udiGroupTransferZ" ya da "SEQ.Gc_udiAllSubModules"
+    cmd: str                # ör. "MC.ET_Cmd.Start" — "diCMD" alanına aynen yazılır
     timeout: str = "T#0MS"
     is_end: bool = False
 
@@ -69,11 +69,11 @@ def generate_cmd_table(table: CmdTable) -> str:
 
     for i, step in enumerate(table.steps):
         if i == 0:
-            call = "TPL.FC_FirstStep(udiStepIndex, diStep);"
+            call = "SEQ.FC_FirstStep(udiStepIndex, diStep);"
         elif i == n - 1:
-            call = "TPL.FC_LastStep(udiStepIndex, diStep);"
+            call = "SEQ.FC_LastStep(udiStepIndex, diStep);"
         else:
-            call = "TPL.FC_NextStep(udiStepIndex, diStep);"
+            call = "SEQ.FC_NextStep(udiStepIndex, diStep);"
         lines.append(call)
 
         values = _step_field_values(step)
@@ -81,7 +81,7 @@ def generate_cmd_table(table: CmdTable) -> str:
             lines.append(_assign_line(table.array_name, f, values[f]))
         lines.append("")  # step'ler arası boş satır (referansla aynı)
 
-    lines.append("TPL.FC_FirstCmdTable(iq_udiTableIndex:= udiTableIndex);")
+    lines.append("SEQ.FC_FirstCmdTable(iq_udiTableIndex:= udiTableIndex);")
     lines.append(f"astListofCMDTables[udiTableIndex].sTitle              := '{table.title}';")
     lines.append(f"astListofCMDTables[udiTableIndex].diCMD               := {table.cmd_enum};")
     lines.append(f"astListofCMDTables[udiTableIndex].udiNumberOfCmdSteps := udiStepIndex;")
@@ -97,10 +97,10 @@ if __name__ == "__main__":
         cmd_enum="ET_Cmd.Prepare",
         array_name="astPrepareTable",
         steps=[
-            CmdStep("DriveEnable On AllSubModules", "TPL.Gc_udiAllSubModules", "AXM.ET_Cmd.DriveEnableOn"),
-            CmdStep("Homing Mode AllSubModules", "TPL.Gc_udiAllSubModules", "AXM.ET_Cmd.Homing"),
-            CmdStep("Homing Start GroupTransferZ", "c_udiGroupTransferZ", "AXM.ET_Cmd.Start"),
-            CmdStep("Homing Start GroupTransferX", "c_udiGroupTransferX", "AXM.ET_Cmd.Start"),
+            CmdStep("DriveEnable On AllSubModules", "SEQ.Gc_udiAllSubModules", "MC.ET_Cmd.DriveEnableOn"),
+            CmdStep("Homing Mode AllSubModules", "SEQ.Gc_udiAllSubModules", "MC.ET_Cmd.Homing"),
+            CmdStep("Homing Start GroupTransferZ", "c_udiGroupTransferZ", "MC.ET_Cmd.Start"),
+            CmdStep("Homing Start GroupTransferX", "c_udiGroupTransferX", "MC.ET_Cmd.Start"),
             CmdStep("End", "0", "0", is_end=True),
         ],
     )

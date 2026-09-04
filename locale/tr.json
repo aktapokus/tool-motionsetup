@@ -30,7 +30,7 @@
   "kapsam_ana_makine": "Ana Makine (modülleri çağırır)",
   "hedefler_etiket": "Hedefler",
   "komutlar_etiket_proje": "Komutlar (modül — ET_Cmd)",
-  "komutlar_etiket_axm": "Komutlar (eksen — AXM.ET_Cmd)",
+  "komutlar_etiket_axm": "Komutlar (eksen — MC.ET_Cmd)",
   "yayin_blok_etiket": "Tümü (yayın)",
   "adreslenemeyen_not": "Bu modülün eksenleri ayrı hedeflenemiyor — sadece modül seviyesinde",
   "ice_aktarilmadi_placeholder": "Bloklar için önce bir proje XML'i içe aktarın",

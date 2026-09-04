@@ -1291,8 +1291,8 @@ function buildTemplateCategoryXml(catId, nameKey, colour, srcLines) {
 }
 (function installTemplateCategories() {
   const robotCatXml = buildTemplateCategoryXml("catRobot", "cat_robot", 330, [
-    "fbHomeXAxis(i_xEnable:= TRUE, i_ifDrive:= DRV_RobotKoliAlma_X, i_xSensor:= Tp_RobotKoliAlma_X_Ref.Value, i_etMode:= PDL.ET_HomeMode.NegDirectionNegEdgeSensor, i_lrOffset:= 0, i_lrMaxTravel:= 1000, i_lrHomePosition:= 0, i_lrVel:= 50, i_lrAcc:= 500, i_lrDec:= 10000, i_lrJerk:= 10000, i_xHwLimitNeg:= , i_xHwLimitPos:= , i_xRotativeSystem:= , i_xStart:= FALSE, q_xActive=> , q_xReady=> , q_etDiag=> , q_etDiagExt=> , q_sMsg=> , q_xMotionInstructionActive=> , q_lrPosition=> , q_xHomeOk=> );",
-    "SR_RobotMotion_KoliAlma(iq_stStandardModuleInterface:=astSubModuleInterface[c_udiRobot], iq_stExceptionList:=iq_stExceptionList, iq_stLogDataList:=iq_stLogDataList, iq_stRoboticModuleItf:=stRobotInterface);"
+    "fbHomeXAxis(i_xEnable:= TRUE, i_ifDrive:= DRV_RobotAxis_X, i_xSensor:= Tp_RobotAxis_X_Ref.Value, i_etMode:= ET_HomeMode.NegDirectionNegEdgeSensor, i_lrOffset:= 0, i_lrMaxTravel:= 1000, i_lrHomePosition:= 0, i_lrVel:= 50, i_lrAcc:= 500, i_lrDec:= 10000, i_lrJerk:= 10000, i_xHwLimitNeg:= , i_xHwLimitPos:= , i_xRotativeSystem:= , i_xStart:= FALSE, q_xActive=> , q_xReady=> , q_etDiag=> , q_etDiagExt=> , q_sMsg=> , q_xMotionInstructionActive=> , q_lrPosition=> , q_xHomeOk=> );",
+    "SR_RobotMotion(iq_stStandardModuleInterface:=astSubModuleInterface[c_udiRobot], iq_stExceptionList:=iq_stExceptionList, iq_stLogDataList:=iq_stLogDataList, iq_stRoboticModuleItf:=stRobotInterface);"
   ]);
   const motionCatXml = buildTemplateCategoryXml("catMotion", "cat_motion", 190, [
     "ton_waitTime(IN:=TRUE, PT:=T#100MS);",
@@ -1684,7 +1684,7 @@ workspace.addChangeListener(render);
 render();
 
 // --- Değişken listesi çıkarma: VAR_INPUT/VAR_OUTPUT/VAR/VAR_IN_OUT/VAR CONSTANT ... END_VAR ---
-// Her giriş artık {name, type} — sadece isim değil, gerçek IEC tipini de (AXM.ST_ModuleInterface,
+// Her giriş artık {name, type} — sadece isim değil, gerçek IEC tipini de (MC.ST_ModuleInterface,
 // TON, ARRAY[...] OF X dahil) taşıyor, çünkü deklarasyon çıktısını yeniden üretebilmemiz gerekiyor.
 // (Değişkenin kendisi en tepede, applyStaticI18n/renderVarLists'in ilk senkron
 // çağrısından ÖNCE tanımlanıyor — TDZ hatası olmasın diye.)

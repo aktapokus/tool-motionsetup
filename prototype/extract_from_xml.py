@@ -2,7 +2,7 @@
 Machine Expert (PLCopen XML) proje export'undan modul registry + komut
 enum'larini ayiklayan prototip script.
 
-Kaynak: LMC_PacDrive.xml (SR02_GroupTransferModule vb. iceren gercek proje)
+Kaynak: LMC_PacDrive.xml (ExampleModule vb. iceren gercek proje)
 """
 import re
 import json
@@ -50,7 +50,7 @@ if et_cmd_block:
     for m in re.finditer(r'<value name="(\w+)" value="(-?\d+)"', et_cmd_block.group(0)):
         et_cmd_values.append({"name": m.group(1), "value": int(m.group(2))})
 
-# ── 3) AXM.ET_Cmd.* — PLC motion kütüphanesinden gelen, projede
+# ── 3) MC.ET_Cmd.* — PLC motion kütüphanesinden gelen, projede
 # TANIMLANMAYAN (kullanilan) enum — deger degil, sadece isim cikarabiliriz. ──
 axm_cmds = sorted(set(re.findall(r'AXM\.ET_Cmd\.(\w+)', text)))
 
@@ -65,7 +65,7 @@ if tork_block:
         axes.append(m.group(1))
 
 # Her ekseni, ismi eksen adinin ICINDE GECEN en uzun modul adiyla eslestir
-# (ör. DRV_RobotKoliAlma_Q -> RobotKoliAlma, DRV_GroupTransferX -> GroupTransfer).
+# (ör. DRV_RobotPickup_Q -> RobotPickup, DRV_GroupTransferX -> GroupTransfer).
 module_names = [k.replace("c_udi", "") for k in modules]
 axes_by_module = {name: [] for name in module_names}
 unmatched_axes = []

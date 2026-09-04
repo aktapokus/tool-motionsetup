@@ -8,17 +8,17 @@ is_end} taşır. Bu modül bir step listesini, referans Init_CmdTables
 POU'suyla (referans örnek modül üzerinden) yapısal olarak eşleşen ST
 koduna çevirir.
 
-Referans desen (gerçek proje kodundan, SR02_GroupTransferModule.Init_CmdTables):
-  - İlk step  -> TPL.FC_FirstStep(udiStepIndex, diStep);
-  - Ara step, ÖNCEKİYLE AYNI diStep'te (paralel) -> TPL.FC_SameStep(udiStepIndex, diStep);
-  - Ara step, YENİ bir diStep'e geçiyor (sıralı) -> TPL.FC_NextStep(udiStepIndex, diStep);
-  - Son step  -> TPL.FC_LastStep(udiStepIndex, diStep);
+Referans desen (gerçek proje kodundan, ExampleModule.Init_CmdTables):
+  - İlk step  -> SEQ.FC_FirstStep(udiStepIndex, diStep);
+  - Ara step, ÖNCEKİYLE AYNI diStep'te (paralel) -> SEQ.FC_SameStep(udiStepIndex, diStep);
+  - Ara step, YENİ bir diStep'e geçiyor (sıralı) -> SEQ.FC_NextStep(udiStepIndex, diStep);
+  - Son step  -> SEQ.FC_LastStep(udiStepIndex, diStep);
   - Her step için 6 alan ata: sTitle, udiModuleName, diStep, diCMD,
     timTimeOut, xEndCMD (bu sırayla, hizalı := ile)
-  - Tablo bitince: TPL.FC_FirstCmdTable + astListofCMDTables[...] 3 satır
+  - Tablo bitince: SEQ.FC_FirstCmdTable + astListofCMDTables[...] 3 satır
 
 SameStep gerçek örnekte doğrulandı: Prepare tablosunda RobotGripper +
-RobotKoliAlma + TopCloser + EntryReject + GroupTransfer hepsi AYNI adımda
+RobotPickup + TopCloser + EntryReject + GroupTransfer hepsi AYNI adımda
 paralel (SameStep) komut alıyor, sonra BoxTransfer yeni bir adıma
 (NextStep) geçiyor. Yani "sıra" hem hangi modülün önce/sonra çalıştığını
 HEM DE hangilerinin birlikte (paralel) çalıştığını ifade ediyor.
@@ -65,14 +65,14 @@ _GECERLI_CAGRI_TIPLERI = {"first", "same", "next", "last"}
 @dataclass
 class CmdStep:
     title: str
-    target_udi: str        # ör. "c_udiGroupTransferZ" ya da "TPL.Gc_udiAllSubModules"
-    cmd: str                # "diCMD" alanına aynen yazılır, ör. "AXM.ET_Cmd.Start"
+    target_udi: str        # ör. "c_udiGroupTransferZ" ya da "SEQ.Gc_udiAllSubModules"
+    cmd: str                # "diCMD" alanına aynen yazılır, ör. "MC.ET_Cmd.Start"
     timeout: str = "T#0MS"
     cagri_tipi: str = "next"  # "first" | "same" | "next" | "last" — KULLANICI seçer,
                                # konumdan (ilk/son satır) OTOMATİK tahmin edilmez.
-                               # first: TPL.FC_FirstStep, same: TPL.FC_SameStep (öncekiyle
-                               # aynı diStep, paralel), next: TPL.FC_NextStep (yeni diStep,
-                               # sıralı), last: TPL.FC_LastStep (tabloyu kapatır).
+                               # first: SEQ.FC_FirstStep, same: SEQ.FC_SameStep (öncekiyle
+                               # aynı diStep, paralel), next: SEQ.FC_NextStep (yeni diStep,
+                               # sıralı), last: SEQ.FC_LastStep (tabloyu kapatır).
                                # NOT: xEndCMD alanı ayrı bir kullanıcı seçimi DEĞİL — tüm
                                # gerçek referans örneklerde xEndCMD := TRUE SADECE "last"
                                # step'te görülüyor, hiç sapma yok — bu yüzden xEndCMD
@@ -408,7 +408,7 @@ def extract_topology(xml_metni: str) -> dict:
                 for m in _re.finditer(r'<value name="(\w+)" value="(-?\d+)"', et_cmd_blok.group(0))
             ]
 
-        # 3) AXM.ET_Cmd.* — kütüphane enum'u, sadece kullanım yerlerinden isim.
+        # 3) MC.ET_Cmd.* — kütüphane enum'u, sadece kullanım yerlerinden isim.
         axm_komutlar = sorted(set(_re.findall(r'AXM\.ET_Cmd\.(\w+)', xml_metni)))
 
         # 4) Eksen listesi — _MotorsTorkControl action'ı tüm fiziksel
@@ -460,7 +460,7 @@ def extract_topology(xml_metni: str) -> dict:
 
 
 def generate_cmd_table(table: CmdTable, ilk_tablo: bool = True) -> str:
-    """ilk_tablo=False: TPL.FC_FirstCmdTable yerine TPL.FC_NextCmdTable
+    """ilk_tablo=False: SEQ.FC_FirstCmdTable yerine SEQ.FC_NextCmdTable
     kullanılır — referans örnekte bir Init_CmdTables action'ında SADECE
     ilk tablo FirstCmdTable, ondan sonraki HER tablo NextCmdTable
     kullanıyor (Prepare=First, Auto/Manual/Stop/.../BrakeRelease=Next)."""
@@ -505,10 +505,10 @@ def generate_cmd_table(table: CmdTable, ilk_tablo: bool = True) -> str:
     lines.append("")
 
     _CAGRI_KOD = {
-        "first": "TPL.FC_FirstStep(udiStepIndex, diStep);",
-        "same": "TPL.FC_SameStep(udiStepIndex, diStep);",
-        "next": "TPL.FC_NextStep(udiStepIndex, diStep);",
-        "last": "TPL.FC_LastStep(udiStepIndex, diStep);",
+        "first": "SEQ.FC_FirstStep(udiStepIndex, diStep);",
+        "same": "SEQ.FC_SameStep(udiStepIndex, diStep);",
+        "next": "SEQ.FC_NextStep(udiStepIndex, diStep);",
+        "last": "SEQ.FC_LastStep(udiStepIndex, diStep);",
     }
     for step in table.steps:
         lines.append(_CAGRI_KOD[step.cagri_tipi])
@@ -518,7 +518,7 @@ def generate_cmd_table(table: CmdTable, ilk_tablo: bool = True) -> str:
             lines.append(_assign_line(table.array_name, f, values[f]))
         lines.append("")
 
-    lines.append(f"TPL.FC_{'First' if ilk_tablo else 'Next'}CmdTable(iq_udiTableIndex:= udiTableIndex);")
+    lines.append(f"SEQ.FC_{'First' if ilk_tablo else 'Next'}CmdTable(iq_udiTableIndex:= udiTableIndex);")
     lines.append(f"astListofCMDTables[udiTableIndex].sTitle              := '{table.title}';")
     lines.append(f"astListofCMDTables[udiTableIndex].diCMD               := {table.cmd_enum};")
     lines.append("astListofCMDTables[udiTableIndex].udiNumberOfCmdSteps := udiStepIndex;")
@@ -527,7 +527,7 @@ def generate_cmd_table(table: CmdTable, ilk_tablo: bool = True) -> str:
 
 
 # ── Var olan Init_CmdTables'ı geriye-parse etme ────────────────────────────
-# Kaynak: kullanıcının gerçek SR02_GroupTransferModule.xml export'u üzerinde
+# Kaynak: kullanıcının gerçek ExampleModule.xml export'u üzerinde
 # doğrulandı (tüm 8 standart tablo + yorum satırına alınmış/devre dışı
 # bırakılmış adımlar + "Brake Release" gibi array adından farklı bir
 # başlık örneği dahil). generate_cmd_table'ın TAM TERSİ: ST metnini
@@ -544,7 +544,7 @@ _TOKEN_RE = _re.compile(
 def _yorum_satirlarini_temizle(metin: str) -> str:
     # "(* ... *)" blok yorumları (gerçek referans dosyada devre dışı
     # bırakılmış eski adımlar tam olarak bu şekilde saklanıyor) önce
-    # kaldırılıyor — aksi halde içindeki TPL.FC_*Step çağrıları da parse
+    # kaldırılıyor — aksi halde içindeki SEQ.FC_*Step çağrıları da parse
     # edilip tabloya hayalet adımlar olarak eklenir (birden fazla "first"
     # step'e, dolayısıyla generate_cmd_table'ın reddetmesine yol açar).
     metin = _re.sub(r"\(\*.*?\*\)", "", metin, flags=_re.S)
@@ -617,7 +617,7 @@ def _init_cmdtables_blogunu_parsele(blok: str) -> dict:
 def parse_init_cmdtables(xml_metni: str) -> list[dict]:
     """Proje export'unda (varsa) Init_CmdTables action'larını bulup geriye-
     parse eder. HER BLOK, onu saran <pou name="..."> ile birlikte ayrı bir
-    girdi olarak döner: [{"pou": "SR02_GroupTransferModule", "tables": {...}}].
+    girdi olarak döner: [{"pou": "ExampleModule", "tables": {...}}].
 
     KRİTİK: bir tam proje export'unda (LMC_PacDrive.xml gibi) hem ana
     makinenin (SR_MainMachine) hem HER modülün kendi Init_CmdTables'ı var —
@@ -654,7 +654,7 @@ def parse_init_cmdtables(xml_metni: str) -> list[dict]:
 # ── Serbest ST mantığı (Logic_active vb.) — parse + render round-trip ──────
 # CMD table'ların aksine burada sabit bir satır şablonu yok: kullanıcının
 # elle yazdığı IF/ELSIF/ELSE dallanmaları, atamalar, fonksiyon çağrıları ve
-# yorumlar var (bkz. Application.xml'deki SR02_GroupTransferModule.Logic_active
+# yorumlar var (bkz. Application.xml'deki ExampleModule.Logic_active
 # örneği). Bu yüzden CMD table motorundan tamamen ayrı, genel amaçlı bir
 # satır-tabanlı ayrıştırıcı: tam bir ST grameri DEĞİL, gerçek örnekte görülen
 # alt kümeyi (tek satırlık IF/ELSIF/ELSE koşulları, ';' ile kapanan
@@ -666,7 +666,7 @@ def parse_init_cmdtables(xml_metni: str) -> list[dict]:
 # etiket regex'lerinin HEPSİ isteğe bağlı bir satır-sonu yorumuna izin
 # veriyor (?://.*)?$ ile; aksi halde satır sonu yorumu olan her CASE
 # etiketi/END_* satırı eşleşmiyor, kapanmamış blok hatası veriyordu
-# (gerçek kullanıcı raporu — SR02_GroupTransferModule.Logic_active).
+# (gerçek kullanıcı raporu — ExampleModule.Logic_active).
 _SATIR_SONU_YORUM = r'(?:\s*//.*)?$'
 _IF_RE = _re.compile(r'^IF\s+(.+?)\s+THEN\s*$', _re.I)
 _ELSIF_RE = _re.compile(r'^ELSIF\s+(.+?)\s+THEN\s*$', _re.I)

@@ -30,7 +30,7 @@
   "kapsam_ana_makine": "Main Machine (calls modules)",
   "hedefler_etiket": "Targets",
   "komutlar_etiket_proje": "Commands (module — ET_Cmd)",
-  "komutlar_etiket_axm": "Commands (axis — AXM.ET_Cmd)",
+  "komutlar_etiket_axm": "Commands (axis — MC.ET_Cmd)",
   "yayin_blok_etiket": "All (broadcast)",
   "adreslenemeyen_not": "This module's axes can't be targeted separately — module-level only",
   "ice_aktarilmadi_placeholder": "Import a project XML first to see blocks",
