@@ -19,9 +19,9 @@ const ICON_UPLOAD = "<svg viewBox='0 0 24 24' width='14' height='14' fill='none'
 const ICON_MODULE = "<svg viewBox='0 0 24 24' width='13' height='13' fill='none' stroke='currentColor' stroke-width='1.7' stroke-linejoin='round'><rect x='3' y='3' width='7' height='7' rx='1'/><rect x='14' y='3' width='7' height='7' rx='1'/><rect x='3' y='14' width='7' height='7' rx='1'/><rect x='14' y='14' width='7' height='7' rx='1'/></svg>";
 const ICON_LAYERS = "<svg viewBox='0 0 24 24' width='14' height='14' fill='none' stroke='currentColor' stroke-width='1.7' stroke-linejoin='round' stroke-linecap='round'><polygon points='12 2 2 7 12 12 22 7 12 2'/><polyline points='2 17 12 22 22 17'/><polyline points='2 12 12 17 22 12'/></svg>";
 
-const ACCENT = '#7C3AED';
-const ACCENT_DARK = '#6D28D9';
-const ACCENT_LIGHT = '#EDE9FE';
+const ACCENT = 'var(--blue)';       // cekirdek aksani (tum araclarda ayni sari)
+const ACCENT_DARK = 'var(--blue-dim)';
+const ACCENT_LIGHT = 'var(--blue-light)';
 
 // Gerçek projede HER modülün Init_CmdTables'ında birebir aynı
 // isimlerle tekrar eden 8 standart tablo — tahmin değil, referans XML'den
@@ -82,7 +82,7 @@ function ensureStyles() {
       font-family: var(--mono); font-size: 10px; padding: 5px 9px; border: 1px solid var(--border);
       border-radius: 999px; background: var(--surface-2); color: var(--text-dim); cursor: pointer;
     }
-    .ms-tablo-tab.active { background: var(--ms-accent); border-color: var(--ms-accent); color: #fff; }
+    .ms-tablo-tab.active { background: var(--ms-accent); border-color: var(--ms-accent); color: var(--on-accent,#141412); }
     .ms-tablo-tab .ms-tab-count { opacity: 0.7; margin-left: 3px; }
     .ms-steps { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
     .ms-step-row {
@@ -92,7 +92,7 @@ function ensureStyles() {
     .ms-step-row.dragging { opacity: 0.4; }
     .ms-step-drag { color: var(--text-xs); flex-shrink: 0; }
     .ms-step-idx {
-      font-family: var(--mono); font-size: 10px; color: var(--ms-accent-dark); background: var(--ms-accent-light);
+      font-family: var(--mono); font-size: 10px; color: var(--blue-text,#7A5800); background: var(--ms-accent-light);
       border-radius: 3px; padding: 1px 5px; flex-shrink: 0; min-width: 18px; text-align: center;
     }
     .ms-step-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
